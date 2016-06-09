@@ -7,9 +7,6 @@ public class CPabePolynomial {
 	public int degree;			// degree of polynom
 	public Element[] coef;		// all coefficients (degree+1)
 	
-	public CPabePolynomial() {
-	}	
-	
 	public CPabePolynomial(int degree, Element zeroVal) {
 		this.degree = degree;
 		this.coef = new Element[degree + 1];

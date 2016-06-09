@@ -19,8 +19,8 @@ public class CPabeMasterSecret {
 	public Element beta; 		// Zr
 	public Element g_alpha; 	// G2
 
-	public CPabeMasterSecret(String cpabekeymsk, CPabePublicParameters pk) throws IOException, ClassNotFoundException {
-		FileInputStream fin = new FileInputStream(cpabekeymsk);
+	public CPabeMasterSecret(String loadfrom, CPabePublicParameters pk) throws IOException, ClassNotFoundException {
+		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream (fin);
 		Object obj = objin.readObject();
 		if (obj instanceof List<?>) {
@@ -35,11 +35,11 @@ public class CPabeMasterSecret {
 	public CPabeMasterSecret() {
 	}
 
-	public void saveAs(String cpabekeymsk) throws IOException {
+	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.beta.toBytes());
 		list.add(this.g_alpha.toBytes());
-	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(cpabekeymsk));
+	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
 	    out.close();
 	}	

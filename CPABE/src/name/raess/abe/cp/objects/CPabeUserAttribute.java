@@ -8,8 +8,16 @@ public class CPabeUserAttribute {
 	public CPabeUserAttribute(String sval) {
 		this.description = sval;
 	}
+	
 	public CPabeUserAttribute() {
 	}
+	
+	public CPabeUserAttribute(String sval, Element dj, Element djp) {
+		this.description = sval;
+		this.dj = dj;
+		this.djp = djp;
+	}	
+	
 	public String description;		// String
 	public Element dj;				// G2
 	public Element djp;				// G1

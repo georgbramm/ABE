@@ -25,35 +25,35 @@ class Start {
 
     	
     	// Start new CPabe
-        CPabe cp = new CPabe();
+        //CPabe cp = new CPabe();
     	
     	// Load an existing CPabe
-        //CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK);
+        CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK);
         
         // and save msk
         cp.getMasterSecretKey().saveAs(CPabeSettings.CPabeKeyMSK);
         // and save pk
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
                         
+        
         String[] attributes = new String[2];
+       
         attributes[0] = "test";
         attributes[1] = "raess";
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		
-		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
+		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));	
+		
+        
+        //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
-			/* example 1
-			// {"or":[{"att":"A","val":"5"},{"att":"B"},{"and":[{"att":"C"},{"att":"D"}]}]}
-			String sJSON = "{\"or\":[{\"att\":\"A\",\"val\":\"5\"},{\"att\":\"B\"},{\"and\":[{\"att\":\"C\"},{\"att\":\"D\"}]}]}";
-			JSONObject json = (JSONObject) new JSONParser().parse(sJSON);
-			CPabePolicy treePolicy = CPabeTools.toPolicy(json);
-			System.out.println(treePolicy.toString()); */
+
 			String sJSONenc = "{\"and\":[{\"att\":\"raess\"},{\"att\":\"test\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
-			//System.out.println(ct.toString());
-			System.out.println(cp.decrypt(cp.getPublicParameters(), georgsKey, ct));
+			String org = cp.decrypt(cp.getPublicParameters(), georgsKey, ct);
+			
 		} catch (IOException e) {
 			System.out.println("error parsing policy");
 		} catch (InvalidKeyException e) {

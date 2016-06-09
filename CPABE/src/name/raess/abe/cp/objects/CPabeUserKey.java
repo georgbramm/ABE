@@ -1,7 +1,14 @@
 package name.raess.abe.cp.objects;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import org.json.simple.JSONObject;
 
@@ -12,6 +19,30 @@ public class CPabeUserKey {
 	public Element d; 		// G2
 	public ArrayList<CPabeUserAttribute> attributes;
 	
+	public CPabeUserKey(String loadfrom, CPabePublicParameters pk) throws ClassNotFoundException, IOException {
+		FileInputStream fin = new FileInputStream(loadfrom);
+		ObjectInputStream objin = new ObjectInputStream (fin);
+		Object obj = objin.readObject();
+		this.attributes = new ArrayList<CPabeUserAttribute>();
+		if (obj instanceof List<?>) {
+			List<byte[]> list = (List<byte[]>) obj;
+			this.d = pk.p.getG2().newElement();
+			this.d.setFromBytes(list.get(0));
+			for(int j = 1; j < list.size(); j += 3) {
+				String desc = new String(list.get(j), "UTF-8");
+				Element dj = pk.p.getG2().newElement();
+				dj.setFromBytes(list.get(j + 1));
+				Element djp = pk.p.getG1().newElement();
+				djp.setFromBytes(list.get(j + 1));
+				CPabeUserAttribute a = new CPabeUserAttribute(desc, dj , djp);
+				this.attributes.add(a);
+			}
+		}
+	}
+	
+	public CPabeUserKey() {
+	}
+
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
@@ -34,8 +65,16 @@ public class CPabeUserKey {
 		return ret;
 	}
 
-	public void saveAs(String replace) {
-		// TODO Auto-generated method stub
-		
+	public void saveAs(String saveas) throws IOException {
+		List<byte[]> list = new ArrayList<byte[]>();
+		list.add(this.d.toBytes());
+		for(int j = 0;j < this.attributes.size(); j++) {
+			list.add(this.attributes.get(j).description.getBytes());
+			list.add(this.attributes.get(j).dj.toBytes());
+			list.add(this.attributes.get(j).djp.toBytes());
+		}
+	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
+	    out.writeObject(list);
+	    out.close();
 	}
 }

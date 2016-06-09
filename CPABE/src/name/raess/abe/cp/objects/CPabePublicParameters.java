@@ -27,8 +27,8 @@ public class CPabePublicParameters {
 	public Element g_hat_alpha;	// GT
 
 	@SuppressWarnings({ "unchecked", "resource" })
-	public CPabePublicParameters(String cpabekeypk) throws IOException, ClassNotFoundException {
-		FileInputStream fin = new FileInputStream(cpabekeypk);
+	public CPabePublicParameters(String loadfrom) throws IOException, ClassNotFoundException {
+		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream(fin);
 		Object obj = objin.readObject();
 		System.out.println(obj.toString());
@@ -62,8 +62,8 @@ public class CPabePublicParameters {
 	public CPabePublicParameters() {
 	}
 
-	public void saveAs(String cpabekeymsk) throws IOException {
-		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(cpabekeymsk));
+	public void saveAs(String saveas) throws IOException {
+		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.g.toBytes()); 		// 0
 		list.add(this.gp.toBytes());		// 1

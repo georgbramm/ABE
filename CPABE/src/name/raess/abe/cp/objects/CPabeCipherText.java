@@ -1,8 +1,5 @@
 package name.raess.abe.cp.objects;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import it.unisa.dia.gas.jpbc.Element;
 
 public class CPabeCipherText {

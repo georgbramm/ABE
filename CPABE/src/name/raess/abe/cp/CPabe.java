@@ -48,11 +48,11 @@ public class CPabe {
 		}
 	}
 
-	/*
-	 * Generate a public key and corresponding master secret key.
-	 */
+	// Generate a public key and corresponding master secret key.
 	public static CPabeCA setup(CPabePublicParameters pub, CPabeMasterSecret msk) {
-		Element alpha, beta_inv;
+		
+		// local variables
+		Element alpha, beta;
 
 		// initialize curve & pairing
 		TypeACurveGenerator curveGenerator = new TypeACurveGenerator(CPabeSettings.rBits, CPabeSettings.qBits);
@@ -60,6 +60,8 @@ public class CPabe {
 		Pairing pairing = PairingFactory.getPairing(params);
 		pub.pairingParams = params;
 		pub.p = pairing;
+		
+		// initialize & compute local elements
 		pub.g = pairing.getG1().newElement();
 		pub.f = pairing.getG1().newElement();
 		pub.h = pairing.getG1().newElement();
@@ -74,10 +76,10 @@ public class CPabe {
 		pub.gp.setToRandom();
 		msk.g_alpha = pub.gp.duplicate();
 		msk.g_alpha.powZn(alpha);
-		beta_inv = msk.beta.duplicate();
-		beta_inv.invert();
+		beta = msk.beta.duplicate();
+		beta.invert();
 		pub.f = pub.g.duplicate();
-		pub.f.powZn(beta_inv);
+		pub.f.powZn(beta);
 		pub.h = pub.g.duplicate();
 		pub.h.powZn(msk.beta);
 		pub.g_hat_alpha = pairing.pairing(pub.g, msk.g_alpha);
@@ -95,6 +97,7 @@ public class CPabe {
 	 */
 	public static CPabeUserKey keygen(CPabePublicParameters pub, CPabeMasterSecret msk, String[] attrs)
 			throws NoSuchAlgorithmException {
+		
 		CPabeUserKey prv = new CPabeUserKey();
 		Element g_r, r, beta_inv;
 		Pairing pairing;
