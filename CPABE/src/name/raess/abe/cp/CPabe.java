@@ -25,197 +25,240 @@ public class CPabe {
 	// our ca
 	private CPabeCA ca;
 
-	// a constructor using a msk and a pk in a file
-	public CPabe(String cpabekeymsk, String cpabekeypk) throws ClassNotFoundException, IOException {
-		CPabePublicParameters pk = new CPabePublicParameters(cpabekeypk);
-		CPabeMasterSecret msk = new CPabeMasterSecret(cpabekeymsk, pk);
+	/*
+	 *  constructors a CPABE with a given cp-abe scheme using given {msk} and {pk} keys
+	 *  (given as String paths to the file(s)). If CPabeSettings.consoleKeyOutput
+	 *  is set to true the newly created key pair is printed to the console
+	 *  
+	 *  @param mskPath path to a msk file
+	 *  @param pkPath path to a pk file
+	 */
+	public CPabe(String mskPath, String pkPath) throws ClassNotFoundException, IOException {
+		// generate new {pk} and {msk} keys with files given as string path
+		CPabePublicParameters pk = new CPabePublicParameters(pkPath);
+		CPabeMasterSecret msk = new CPabeMasterSecret(mskPath, pk);
+		// generate a new CA with a given key pair
 		this.ca = new CPabeCA(msk, pk);
+		// and give it out to console if desired
 		if(CPabeSettings.consoleKeyOutput) {
-			// and give it out to console
 			System.out.println(this.ca.toString());			
 		}
-	}
-
-	// generate a fresh new ca
-	public CPabe() {
-		// generate a new CA upon construction
-		CPabePublicParameters pk = new CPabePublicParameters();
-		CPabeMasterSecret msk = new CPabeMasterSecret();		
-		this.ca = CPabe.setup(pk, msk);
-		if(CPabeSettings.consoleKeyOutput) {
-			// and give it out to console
-			System.out.println(this.ca.toString());			
-		}
-	}
-
-	// Generate a public key and corresponding master secret key.
-	public static CPabeCA setup(CPabePublicParameters pub, CPabeMasterSecret msk) {
-		
-		// local variables
-		Element alpha, beta;
-
-		// initialize curve & pairing
-		TypeACurveGenerator curveGenerator = new TypeACurveGenerator(CPabeSettings.rBits, CPabeSettings.qBits);
-		PairingParameters params = curveGenerator.generate();
-		Pairing pairing = PairingFactory.getPairing(params);
-		pub.pairingParams = params;
-		pub.p = pairing;
-		
-		// initialize & compute local elements
-		pub.g = pairing.getG1().newElement();
-		pub.f = pairing.getG1().newElement();
-		pub.h = pairing.getG1().newElement();
-		pub.gp = pairing.getG2().newElement();
-		pub.g_hat_alpha = pairing.getGT().newElement();
-		alpha = pairing.getZr().newElement();
-		msk.beta = pairing.getZr().newElement();
-		msk.g_alpha = pairing.getG2().newElement();
-		alpha.setToRandom();
-		msk.beta.setToRandom();
-		pub.g.setToRandom();
-		pub.gp.setToRandom();
-		msk.g_alpha = pub.gp.duplicate();
-		msk.g_alpha.powZn(alpha);
-		beta = msk.beta.duplicate();
-		beta.invert();
-		pub.f = pub.g.duplicate();
-		pub.f.powZn(beta);
-		pub.h = pub.g.duplicate();
-		pub.h.powZn(msk.beta);
-		pub.g_hat_alpha = pairing.pairing(pub.g, msk.g_alpha);
-		
-		// generate a new ca set keys and return
-		CPabeCA ca = new CPabeCA();
-		ca.msk = msk;
-		ca.pk = pub;
-		
-		return ca;
 	}
 
 	/*
-	 * Generate a private key with the given set of attributes.
+	 *  constructors a CPABE with a new cp-abe scheme using a new {msk} and {pk} key.
+	 *  If CPabeSettings.consoleKeyOutput is set to true the newly 
+	 *  created key pair is printed to the console
 	 */
-	public static CPabeUserKey keygen(CPabePublicParameters pub, CPabeMasterSecret msk, String[] attrs)
+	public CPabe() {
+		// completely new {pk} and {msk} keys
+		CPabePublicParameters pk = new CPabePublicParameters();
+		CPabeMasterSecret msk = new CPabeMasterSecret();	
+		// generate a completely new CA upon construction
+		this.ca = CPabe.setup(pk, msk);
+		// and give it out to console if desired
+		if(CPabeSettings.consoleKeyOutput) {
+			System.out.println(this.ca.toString());			
+		}
+	}
+
+	/*
+	 *  constructors a new cp-abe scheme and calculate & generate new key pair {msk} and {pk}.
+	 *  
+	 *  @param pk a CPabePublicParameters object
+	 *  @param msk a CPabeMasterSecret object
+	 *  @return a newly generate CPabeCA
+	 */
+	public static CPabeCA setup(CPabePublicParameters pk, CPabeMasterSecret msk) {
+		// initialize new curve & pairing
+		TypeACurveGenerator curveGenerator = new TypeACurveGenerator(CPabeSettings.rBits, CPabeSettings.qBits);
+		PairingParameters parms = curveGenerator.generate();
+		Pairing pairing = PairingFactory.getPairing(parms);
+		pk.pairingParams = parms;
+		pk.p = pairing;
+		
+		// initialize & compute elements
+		// Public Parameters Key {PK}
+		// g
+		pk.g = pairing.getG1().newElement();
+		pk.g.setToRandom();
+		// h
+		pk.h = pairing.getG1().newElement();
+		pk.h = pk.g.duplicate();
+		// f
+		pk.f = pairing.getG1().newElement();
+		pk.f = pk.g.duplicate();		
+		// g pairing
+		pk.gp = pairing.getG2().newElement();
+		pk.gp.setToRandom();
+		// e(g, g)^alpha
+		pk.gAlpha = pairing.getGT().newElement();
+		
+		// Master Secret Key {MSK}
+		// beta
+		msk.beta = pairing.getZr().newElement();
+		msk.beta.setToRandom();	
+		// alpha
+		msk.gAlpha = pairing.getG2().newElement();
+		msk.gAlpha = pk.gp.duplicate();
+		msk.gAlpha.powZn(pairing.getZr().newElement().setToRandom());
+		
+		// and now after msk.beta is computed
+		// apply msk.beta to {PK}->f^(1/beta)
+		pk.f.powZn(msk.beta.invert());
+		// apply msk.beta to {PK}->h^beta
+		pk.h.powZn(msk.beta);	
+		
+		// Computes the product of pairings, 
+		// that is 'e'('pk.g'[0], 'msk.gAlpha'[0]) ... 'e'('pk.g'[n-1], 'msk.gAlpha'[n-1]).
+		pk.gAlpha = pairing.pairing(pk.g, msk.gAlpha);
+		
+		// generate a new ca set keys and return
+		return new CPabeCA(msk, pk);
+	}
+
+	/*
+	 *  calculate & generate a new user key {sk} with an attribute set, given as a String[] array
+	 *  and a public parameters key {pk} and a master secret key {sk}
+	 *  
+	 *  @param pk a CPabePublicParameters object
+	 *  @param msk a CPabeMasterSecret object
+	 *  @param attrs an array of attributes as string values
+	 *  @return a newly generate CPabeUserKey corresponding to the given attrs.
+	 */
+	public static CPabeUserKey keygen(CPabePublicParameters pk, CPabeMasterSecret msk, String[] attrs)
 			throws NoSuchAlgorithmException {
 		
-		CPabeUserKey prv = new CPabeUserKey();
-		Element g_r, r, beta_inv;
-		Pairing pairing;
-
-		/* initialize */
-		pairing = pub.p;
-		prv.d = pairing.getG2().newElement();
-		g_r = pairing.getG2().newElement();
-		r = pairing.getZr().newElement();
-		beta_inv = pairing.getZr().newElement();
-
-		/* compute */
+		// new user key
+		CPabeUserKey prv = new CPabeUserKey();	
+		
+		// random r
+		Element r;
+		r = pk.p.getZr().newElement();
 		r.setToRandom();
-		g_r = pub.gp.duplicate();
-		g_r.powZn(r);
-
-		prv.d = msk.g_alpha.duplicate();
-		prv.d.mul(g_r);
-		beta_inv = msk.beta.duplicate();
-		beta_inv.invert();
-		prv.d.powZn(beta_inv);
-
-		int i;
+		
+		// calc & set new D
+		Element dgPrime;
+		dgPrime = pk.p.getG2().newElement();
+		dgPrime = pk.gp.duplicate();
+		dgPrime.powZn(r);		
+		prv.d = pk.p.getG2().newElement();
+		prv.d = msk.gAlpha.duplicate();
+		prv.d.mul(dgPrime);
+		prv.d.powZn(msk.beta.invert());
+		
+		// generate a new list of CPabeUserAttributes
 		prv.attributes = new ArrayList<CPabeUserAttribute>();
-		for (i = 0; i < attrs.length; i++) {
-			CPabeUserAttribute att = new CPabeUserAttribute();
-			Element h_rp;
-			Element rp;
-
-			att.description = attrs[i];
-
-			att.dj = pairing.getG2().newElement();
-			att.djp = pairing.getG1().newElement();
-			h_rp = pairing.getG2().newElement();
-			rp = pairing.getZr().newElement();
-
-			CPabeTools.randomOracle(h_rp, att.description);
+		for (int i = 0; i < attrs.length; i++) {
 			
-			rp.setToRandom();
-
-			h_rp.powZn(rp);
-
-			att.dj = g_r.duplicate();
-			att.dj.mul(h_rp);
-			att.djp = pub.g.duplicate();
-			att.djp.powZn(rp);
-
+			// random rj
+			Element rj = pk.p.getZr().newElement().setToRandom();
+			
+			// hashed attribute element generated by a random oracle
+			// using the attribute as string
+			Element hashedAttribute = pk.p.getG2().newElement();
+			CPabeTools.randomOracle(hashedAttribute, attrs[i]);
+			
+			// calc H(j)^r_j
+			hashedAttribute.powZn(rj);
+			
+			// a new user attribute
+			CPabeUserAttribute att = new CPabeUserAttribute();
+			
+			// set description string
+			att.description = attrs[i];
+			
+			// calc & set Dj part
+			att.dj = pk.p.getG2().newElement();
+			att.dj = dgPrime.duplicate();
+			att.dj.mul(hashedAttribute);
+			
+			// calc & set Dj prime part
+			att.djp = pk.p.getG1().newElement();
+			att.djp = pk.g.duplicate();
+			att.djp.powZn(rj);
+			
+			// add to attributes list of {SK}
 			prv.attributes.add(att);
 		}
-
+		
+		// and return {SK}
 		return prv;
 	}
 	
-	public static CPabeCipherText encrypt(CPabePublicParameters pub, byte[] message, JSONObject jsonPolicy) throws Exception {
-		CPabeCipherText cph = new CPabeCipherText();
-		Element s, m;
-
-		/* initialize */
-
-		Pairing pairing = pub.p;
-		s = pairing.getZr().newElement();
-		m = pairing.getGT().newElement();
-		cph.cs = pairing.getGT().newElement();
-		cph.c = pairing.getG1().newElement();
-		
-		cph.policy = CPabeTools.parsePolicy(jsonPolicy);
-
-		System.out.println("policy:" + cph.policy.toString());
-		
-		/* compute */
-		m.setToRandom();
-		s.setToRandom();
-		cph.cs = pub.g_hat_alpha.duplicate();
-		cph.cs.powZn(s); /* num_exps++; */
-		cph.cs.mul(m); /* num_muls++; */
-
-		cph.c = pub.h.duplicate();
-		cph.c.powZn(s); /* num_exps++; */
-
-		CPabeTools.fillPolicy(cph.policy, pub, s);
-		
-		cph.cipherText = CPabeTools.symEncrypt(m, message);
-
-		return cph;
-	}
-
 	/*
-	 * Decrypt the specified ciphertext using the given private key, filling in
-	 * the provided element m (which need not be initialized) with the result.
-	 * 
-	 * Returns true if decryption succeeded, false if this key does not satisfy
-	 * the policy of the ciphertext (in which case m is unaltered).
-	 */
-	public static String decrypt(CPabePublicParameters pub, CPabeUserKey prv, CPabeCipherText cph) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
-		Element t;
+	 *  encrypt a byte[] message using the public parameters {pk} and a 
+	 *  policy given as JSONObject.
+	 *  
+	 *  {rules}:
+	 *   TODO: WRITE DOWN RULES
+	 *  
+	 *  @param pk a CPabePublicParameters object
+	 *  @param message a byte[] message to encrypt
+	 *  @param jsonPolicy a JSONObject policy structure according to the {rules}
+	 *  @return a newly generate CPabeCipherText corresponding to given data and the JSONObject policy.
+	 */	
+	public static CPabeCipherText encrypt(CPabePublicParameters pk, byte[] message, JSONObject jsonPolicy) throws Exception {
+		
+		// new ciphertext
+		CPabeCipherText ct = new CPabeCipherText();
+		
+		// initialize random Elements
+		Element s, m;
+		s = pk.p.getZr().newElement();
+		s.setToRandom();
+		m = pk.p.getGT().newElement();
+		m.setToRandom();
+		
+		// set C Prime part
+		ct.cPrime = pk.p.getGT().newElement();
+		ct.cPrime = pk.gAlpha.duplicate();
+		ct.cPrime.powZn(s);
+		ct.cPrime.mul(m);		
+		
+		// set C part
+		ct.c = pk.p.getG1().newElement();
+		ct.c = pk.h.duplicate();
+		ct.c.powZn(s);
+		
+		// generate new policy tree 
+		ct.policy = CPabeTools.parsePolicy(jsonPolicy);
+		
+		// calculate new policy tree ( Bethencourt Goyal Algorithm ) 
+		CPabeTools.bethencourtGoyal(ct.policy, pk, s);
+		
+		// encrypt byte message using random m
+		ct.cipherText = CPabeTools.symEncrypt(m, message);
+
+		// and return ciphertext
+		return ct;
+	}
+	
+	/*
+	 *  decrypt a CPabeCipherText {ct} using the public parameters keys {pk} and a CPabeUserKey {sk}
+	 *  
+	 *  @param pk a CPabePublicParameters object
+	 *  @param sk a CPabeUserKey object
+	 *  @param ct a CPabeCipherText object
+	 *  @return the decrypted
+	 */		
+	public static byte[] decrypt(CPabePublicParameters pk, CPabeUserKey sk, CPabeCipherText ct) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
+
 		Element m;
 		
-		m = pub.p.getGT().newElement();
-		t = pub.p.getGT().newElement();
-
-		CPabeTools.checkSatisfy(cph.policy, prv);
-		if (!cph.policy.satisfiable) {
+		if (!CPabeTools.checkSatisfy(ct.policy, sk)) {
 			System.err.println("cannot decrypt, attributes in key do not satisfy policy");
-			return "";
+			return null;
 		}
-
-		CPabeTools.pickSatisfyMinLeaves(cph.policy, prv);
-
-		CPabeTools.decFlatten(t, cph.policy, prv, pub);
-
-		m = cph.cs.duplicate();
-		m.mul(t); /* num_muls++; */
-
-		t = pub.p.pairing(cph.c, prv.d);
-		t.invert();
-		m.mul(t); /* num_muls++; */
-		
-		return CPabeTools.symDecrypt(m, cph);
+		else {
+			m = pk.p.getGT().newElement();
+			CPabeTools.calcMinLeaves(ct.policy, sk);		
+			Element t = CPabeTools.decPolicyTree(ct.policy, sk, pk);			
+			m = ct.cPrime.duplicate();
+			m.mul(t);
+			m.mul(pk.p.pairing(ct.c, sk.d).invert());	
+			return CPabeTools.symDecrypt(m, ct);
+		}
 	}
 
 	public CPabeMasterSecret getMasterSecretKey() {

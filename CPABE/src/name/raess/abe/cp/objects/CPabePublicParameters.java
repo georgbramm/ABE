@@ -24,7 +24,7 @@ public class CPabePublicParameters {
 	public Element gp;			// G2
 	public Element h;			// G1
 	public Element f;			// G1
-	public Element g_hat_alpha;	// GT
+	public Element gAlpha;	// GT
 
 	@SuppressWarnings({ "unchecked", "resource" })
 	public CPabePublicParameters(String loadfrom) throws IOException, ClassNotFoundException {
@@ -53,9 +53,9 @@ public class CPabePublicParameters {
 			this.f = this.p.getG1().newElement();
 			this.f.setFromBytes(list.get(3));
 			System.out.println("f " + this.f.toString());
-			this.g_hat_alpha = this.p.getGT().newElement();
-			this.g_hat_alpha.setFromBytes(list.get(4));
-			System.out.println("gHatAlpha " + this.g_hat_alpha.toString());
+			this.gAlpha = this.p.getGT().newElement();
+			this.gAlpha.setFromBytes(list.get(4));
+			System.out.println("gHatAlpha " + this.gAlpha.toString());
 		}		
 	}
 
@@ -69,7 +69,7 @@ public class CPabePublicParameters {
 		list.add(this.gp.toBytes());		// 1
 		list.add(this.h.toBytes());			// 2
 		list.add(this.f.toBytes());			// 3
-		list.add(this.g_hat_alpha.toBytes());	// 4
+		list.add(this.gAlpha.toBytes());	// 4
 		out.writeObject(this.pairingParams);
 		out.writeObject(list);
 	    out.close();		    
@@ -80,7 +80,7 @@ public class CPabePublicParameters {
 		JSONObject key = new JSONObject();
 		key.put("g", this.g.toString());
 		key.put("gp", this.gp.toString());
-		key.put("gHatAlpha", this.g_hat_alpha.toString());
+		key.put("gHatAlpha", this.gAlpha.toString());
 		key.put("h", this.h.toString());
 		key.put("f", this.f.toString());
 		key.put("pairing", this.pairingParams.toString());

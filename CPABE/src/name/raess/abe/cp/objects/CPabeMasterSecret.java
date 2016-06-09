@@ -17,7 +17,7 @@ import it.unisa.dia.gas.jpbc.Element;
  */
 public class CPabeMasterSecret {
 	public Element beta; 		// Zr
-	public Element g_alpha; 	// G2
+	public Element gAlpha; 	// G2
 
 	public CPabeMasterSecret(String loadfrom, CPabePublicParameters pk) throws IOException, ClassNotFoundException {
 		FileInputStream fin = new FileInputStream(loadfrom);
@@ -27,8 +27,8 @@ public class CPabeMasterSecret {
 			List<byte[]> list = (List<byte[]>) obj;
 			this.beta = pk.p.getZr().newElement();
 			this.beta.setFromBytes(list.get(0));
-			this.g_alpha = pk.p.getG2().newElement();
-			this.g_alpha.setFromBytes(list.get(1));
+			this.gAlpha = pk.p.getG2().newElement();
+			this.gAlpha.setFromBytes(list.get(1));
 		}
 	}
 
@@ -38,7 +38,7 @@ public class CPabeMasterSecret {
 	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.beta.toBytes());
-		list.add(this.g_alpha.toBytes());
+		list.add(this.gAlpha.toBytes());
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
 	    out.close();
@@ -48,7 +48,7 @@ public class CPabeMasterSecret {
 		JSONObject obj = new JSONObject();
 		JSONObject key = new JSONObject();
 		key.put("beta", this.beta.toString());
-		key.put("gHatAlpha", this.g_alpha.toString());
+		key.put("gHatAlpha", this.gAlpha.toString());
 		obj.put("name", "msk");
 		obj.put("key", key);
 		return obj.toJSONString();

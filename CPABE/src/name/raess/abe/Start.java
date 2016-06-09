@@ -35,25 +35,21 @@ class Start {
         // and save pk
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
                         
-        
-        /*
+      
         String[] attributes = new String[2];
-       
         attributes[0] = "test";
         attributes[1] = "raess";
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
-		
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));	
-		*/
-        
-        CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
+		
+        //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 
 			String sJSONenc = "{\"or\":[{\"att\":\"raess\"},{\"att\":\"test\"},{\"att\":\"abc\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
-			String org = cp.decrypt(cp.getPublicParameters(), georgsKey, ct);
+			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));
 			
 		} catch (IOException e) {
 			System.out.println("error parsing policy");

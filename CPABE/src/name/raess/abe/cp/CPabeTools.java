@@ -60,7 +60,7 @@ public class CPabeTools {
         return secret;
 	}
 
-    public static String symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+    public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
     	System.out.println("decryption key:" + keyElement.toString());
     	String[] encrypted = ct.cipherText.split(CPabeSettings.SPLIT);
     	byte[] cipherText = Base64.getDecoder().decode(encrypted[0]);
@@ -78,7 +78,7 @@ public class CPabeTools {
         } catch (BadPaddingException e) {
             e.printStackTrace();
         }
-        return new String(decryptedTextBytes);
+        return decryptedTextBytes;
     }
 
 	public static void randomOracle(Element h, String attribute) {
@@ -151,7 +151,7 @@ public class CPabeTools {
 		return root;
 	}
 
-	public static void fillPolicy(CPabePolicy p, CPabePublicParameters pub, Element e) throws NoSuchAlgorithmException {
+	public static void bethencourtGoyal(CPabePolicy p, CPabePublicParameters pub, Element e) throws NoSuchAlgorithmException {
 		int i;
 		Element r, t, h;
 		Pairing pairing = pub.p;
@@ -173,13 +173,13 @@ public class CPabeTools {
 			for (i = 0; i < p.children.length; i++) {
 				r.set(i + 1);
 				t = p.q.evalPoly(r);
-				CPabeTools.fillPolicy(p.children[i], pub, t);
+				CPabeTools.bethencourtGoyal(p.children[i], pub, t);
 			}
 		}
 
 	}
 
-	public static void checkSatisfy(CPabePolicy p, CPabeUserKey prv) {
+	public static boolean checkSatisfy(CPabePolicy p, CPabeUserKey prv) {
 		int i, l;
 		String prvAttr;
 		p.satisfiable = false;
@@ -204,14 +204,14 @@ public class CPabeTools {
 			if (l >= p.k)
 				p.satisfiable = true;
 		}
+		return p.satisfiable;
 	}
 
-	public static void decFlatten(Element r, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
-		Element one;
-		one = pub.p.getZr().newElement();
-		one.setToOne();
-		r.setToOne();
-		CPabeTools.decNodeFlatten(r, one, p, prv, pub);
+	public static Element decPolicyTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
+		Element ret = pub.p.getGT().newElement().setToOne();
+		Element one = pub.p.getZr().newElement().setToOne();
+		CPabeTools.decNodeFlatten(ret, one, p, prv, pub);
+		return ret;
 	}
 
 	private static void decNodeFlatten(Element r, Element exp, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
@@ -223,8 +223,7 @@ public class CPabeTools {
 		}
 	}
 
-	private static void decInternalFlatten(Element r, Element exp,
-			CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
+	private static void decInternalFlatten(Element r, Element exp, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
 		int i;
 		Element t, expnew;
 		t = pub.p.getZr().newElement();
@@ -271,7 +270,7 @@ public class CPabeTools {
 		r.mul(s);
 	}
 
-	public static void pickSatisfyMinLeaves(CPabePolicy p, CPabeUserKey prv) {
+	public static void calcMinLeaves(CPabePolicy p, CPabeUserKey prv) {
 		int i, k, l, c_i;
 		int len;
 		ArrayList<Integer> c = new ArrayList<Integer>();
@@ -282,7 +281,7 @@ public class CPabeTools {
 			len = p.children.length;
 			for (i = 0; i < len; i++)
 				if (p.children[i].satisfiable)
-					CPabeTools.pickSatisfyMinLeaves(p.children[i], prv);
+					CPabeTools.calcMinLeaves(p.children[i], prv);
 
 			for (i = 0; i < len; i++)
 				c.add(new Integer(i));
