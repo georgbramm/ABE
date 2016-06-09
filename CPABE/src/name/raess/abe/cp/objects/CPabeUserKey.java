@@ -33,7 +33,7 @@ public class CPabeUserKey {
 				Element dj = pk.p.getG2().newElement();
 				dj.setFromBytes(list.get(j + 1));
 				Element djp = pk.p.getG1().newElement();
-				djp.setFromBytes(list.get(j + 1));
+				djp.setFromBytes(list.get(j + 2));
 				CPabeUserAttribute a = new CPabeUserAttribute(desc, dj , djp);
 				this.attributes.add(a);
 			}
@@ -68,10 +68,10 @@ public class CPabeUserKey {
 	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.d.toBytes());
-		for(int j = 0;j < this.attributes.size(); j++) {
-			list.add(this.attributes.get(j).description.getBytes());
-			list.add(this.attributes.get(j).dj.toBytes());
-			list.add(this.attributes.get(j).djp.toBytes());
+		for(int x = 0;x < this.attributes.size(); x++) {
+			list.add(this.attributes.get(x).description.getBytes());
+			list.add(this.attributes.get(x).dj.toBytes());
+			list.add(this.attributes.get(x).djp.toBytes());
 		}
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
