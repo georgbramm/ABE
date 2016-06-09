@@ -172,25 +172,9 @@ public class CPabeTools {
 		} else {
 			for (i = 0; i < p.children.length; i++) {
 				r.set(i + 1);
-				CPabeTools.evalPoly(t, p.q, r);
+				t = p.q.evalPoly(r);
 				CPabeTools.fillPolicy(p.children[i], pub, t);
 			}
-		}
-
-	}
-
-	private static void evalPoly(Element r, CPabePolynomial q, Element x) {
-		int i;
-		Element s, t;
-		s = r.duplicate();
-		t = r.duplicate();
-		r.setToZero();
-		t.setToOne();
-		for (i = 0; i < q.degree + 1; i++) {
-			s = q.coef[i].duplicate();
-			s.mul(t); 
-			r.add(s);
-			t.mul(x);
 		}
 
 	}

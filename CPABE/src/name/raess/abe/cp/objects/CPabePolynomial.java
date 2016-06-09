@@ -19,5 +19,20 @@ public class CPabePolynomial {
 			this.coef[i] = zeroVal.duplicate();
 			this.coef[i].setToRandom();
 		}
+	}
+	
+	public Element evalPoly(Element x) {
+		Element r = this.coef[0].duplicate();
+		Element s = r.duplicate();
+		Element t = r.duplicate();
+		r.setToZero();
+		t.setToOne();
+		for (int i = 0; i < this.degree + 1; i++) {
+			s = this.coef[i].duplicate();
+			s.mul(t); 
+			r.add(s);
+			t.mul(x);
+		}
+		return r;
 	}	
 }
