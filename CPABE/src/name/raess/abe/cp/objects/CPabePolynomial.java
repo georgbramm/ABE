@@ -10,42 +10,14 @@ public class CPabePolynomial {
 	public CPabePolynomial() {
 	}	
 	
-	public CPabePolynomial(int d, Element zero) {
-		this.degree = d;
-		this.coef = new Element[d + 1];
-
-		for (int i = 0; i < d + 1; i++) {
-			this.coef[i] = zero.duplicate();
+	public CPabePolynomial(int degree, Element zeroVal) {
+		this.degree = degree;
+		this.coef = new Element[degree + 1];
+		this.coef[0] = zeroVal.duplicate();
+		this.coef[0].set(zeroVal);
+		for (int i = 1; i < degree + 1; i++) {
+			this.coef[i] = zeroVal.duplicate();
 			this.coef[i].setToRandom();
 		}
-		this.coef[0].set(zero);
-	}
-
-	public static CPabePolynomial generateRandom(int degree, Element zeroVal) {
-		CPabePolynomial q = new CPabePolynomial(degree, zeroVal);
-		if(degree > 0) {
-			for (int i = 1; i < degree; i++) {
-				q.coef[i] = zeroVal.duplicate();
-				q.coef[i].setToRandom();
-			}
-		}
-		return q;
-	}
-	
-	public Element evaluateAt(Element atPosition) {
-		Element temp, one, result;
-		temp = atPosition.duplicate();
-		one = atPosition.duplicate();
-		result = atPosition.duplicate();
-		temp.setToZero();
-		one.setToOne();
-		result.setToZero();
-		for (int i = 0; i < this.degree; i++) {
-			temp = this.coef[i].duplicate();
-			temp.mul(one); 
-			result.add(temp);
-			one.mul(atPosition);
-		}
-		return result;
-	}
+	}	
 }

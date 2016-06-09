@@ -37,6 +37,60 @@ import name.raess.abe.cp.objects.CPabeUserKey;
 
 public class CPabeTools {
 
+
+	public static String symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
+		System.out.println("encryption key:" + keyElement.toString());
+        // Derive the key
+        SecretKeySpec secret = CPabeTools.deriveKey(keyElement);
+        //encrypt the message
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secret);
+        AlgorithmParameters params = cipher.getParameters();
+        byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
+        return Base64.getEncoder().encodeToString(cipher.doFinal(data)) + CPabeSettings.SPLIT + Base64.getEncoder().encodeToString(iv);
+    }
+	
+	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
+        // Derive the key
+        byte[] key = keyElement.toBytes();
+        MessageDigest sha = MessageDigest.getInstance("SHA-1");
+        key = sha.digest(key);
+        key = Arrays.copyOf(key, 16); // use only first 128 bit because of stupid java restrictions?
+        SecretKeySpec secret = new SecretKeySpec(key, "AES");
+        return secret;
+	}
+
+    public static String symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+    	System.out.println("decryption key:" + keyElement.toString());
+    	String[] encrypted = ct.cipherText.split(CPabeSettings.SPLIT);
+    	byte[] cipherText = Base64.getDecoder().decode(encrypted[0]);
+    	byte[] iv = Base64.getDecoder().decode(encrypted[1]);
+        // Derive the key
+        SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
+        // Decrypt the message
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
+        byte[] decryptedTextBytes = null;
+        try {
+            decryptedTextBytes = cipher.doFinal(cipherText);
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        }
+        return new String(decryptedTextBytes);
+    }
+
+	public static void randomOracle(Element h, String attribute) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-1");
+			byte[] digest = md.digest(attribute.getBytes());
+			h.setFromHash(digest, 0, digest.length);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+	}
+    
 	public static CPabePolicy parsePolicy(JSONObject policy) throws IOException {
 		String att = null;
 		int attValue = 0;
@@ -97,36 +151,19 @@ public class CPabeTools {
 		return root;
 	}
 
-
-	private static CPabePolicy baseNode(int k, String s) {
-		CPabePolicy p = new CPabePolicy();
-
-		p.k = k;
-		if (!(s == null))
-			p.attribute = s;
-		else
-			p.attribute = null;
-		p.q = null;
-
-		return p;
-	}
-
-
-	public static void fillPolicy(CPabePolicy p, CPabePublicParameters pub, Element e)
-			throws NoSuchAlgorithmException {
-		
+	public static void fillPolicy(CPabePolicy p, CPabePublicParameters pub, Element e) throws NoSuchAlgorithmException {
 		int i;
 		Element r, t, h;
 		Pairing pairing = pub.p;
 		r = pairing.getZr().newElement();
 		t = pairing.getZr().newElement();
 		h = pairing.getG2().newElement();
-
-		p.q = CPabeTools.randomPolynom(p.k - 1, e);
-
+		// generate new random polynomial with fixed 0 value (e)
+		p.q = new CPabePolynomial(p.k - 1, e);
 		if (p.children == null || p.children.length == 0) {
 			p.cy = pairing.getG1().newElement();
 			p.cy_Prime = pairing.getG2().newElement();
+			// set h to random oracle of attribute
 			CPabeTools.randomOracle(h, p.attribute);
 			p.cy = pub.g.duplicate();;
 			p.cy.powZn(p.q.coef[0]); 	
@@ -142,73 +179,30 @@ public class CPabeTools {
 
 	}
 
-
-	public static void randomOracle(Element h, String attribute) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-1");
-			System.out.println(attribute);
-			byte[] digest = md.digest(attribute.getBytes());
-			h.setFromHash(digest, 0, digest.length);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-	}
-
-
 	private static void evalPoly(Element r, CPabePolynomial q, Element x) {
 		int i;
 		Element s, t;
-
 		s = r.duplicate();
 		t = r.duplicate();
-
 		r.setToZero();
 		t.setToOne();
-
 		for (i = 0; i < q.degree + 1; i++) {
-			/* r += q->coef[i] * t */
 			s = q.coef[i].duplicate();
 			s.mul(t); 
 			r.add(s);
-
-			/* t *= x */
 			t.mul(x);
 		}
 
 	}
 
-
-
-	private static CPabePolynomial randomPolynom(int deg, Element zeroVal) {
-		int i;
-		CPabePolynomial q = new CPabePolynomial();
-		q.degree = deg;
-		q.coef = new Element[deg + 1];
-
-		for (i = 0; i < deg + 1; i++)
-			q.coef[i] = zeroVal.duplicate();
-
-		q.coef[0].set(zeroVal);
-
-		for (i = 1; i < deg + 1; i++)
-			q.coef[i].setToRandom();
-
-		return q;
-	}
-
-
 	public static void checkSatisfy(CPabePolicy p, CPabeUserKey prv) {
 		int i, l;
 		String prvAttr;
-
 		p.satisfiable = false;
 		if (p.children == null || p.children.length == 0) {
 			for (i = 0; i < prv.attributes.size(); i++) {
 				prvAttr = prv.attributes.get(i).description;
-				// System.out.println("prvAtt:" + prvAttr);
-				// System.out.println("p.attr" + p.attr);
 				if (prvAttr.compareTo(p.attribute) == 0) {
-					// System.out.println("=staisfy=");
 					p.satisfiable = true;
 					p.index = i;
 					break;
@@ -237,20 +231,20 @@ public class CPabeTools {
 	}
 
 	private static void decNodeFlatten(Element r, Element exp, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
-		if (p.children == null || p.children.length == 0)
+		if (p.children == null || p.children.length == 0) {
 			CPabeTools.decLeafFlatten(r, exp, p, prv, pub);
-		else
+		}
+		else {
 			CPabeTools.decInternalFlatten(r, exp, p, prv, pub);
+		}
 	}
 
 	private static void decInternalFlatten(Element r, Element exp,
 			CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
 		int i;
 		Element t, expnew;
-
 		t = pub.p.getZr().newElement();
 		expnew = pub.p.getZr().newElement();
-
 		for (i = 0; i < p.satisfiableList.size(); i++) {
 			CPabeTools.lagrangeCoef(t, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
 			expnew = exp.duplicate();
@@ -262,19 +256,17 @@ public class CPabeTools {
 	private static void lagrangeCoef(Element r, ArrayList<Integer> s, int i) {
 		int j, k;
 		Element t;
-
 		t = r.duplicate();
-
 		r.setToOne();
 		for (k = 0; k < s.size(); k++) {
 			j = s.get(k).intValue();
 			if (j == i)
 				continue;
 			t.set(-j);
-			r.mul(t); /* num_muls++; */
+			r.mul(t);
 			t.set(i - j);
 			t.invert();
-			r.mul(t); /* num_muls++; */
+			r.mul(t);
 		}
 	}
 
@@ -283,19 +275,16 @@ public class CPabeTools {
 			CPabeUserKey prv, CPabePublicParameters pub) {
 		CPabeUserAttribute c;
 		Element s, t;
-
 		c = prv.attributes.get(p.index);
-
 		s = pub.p.getGT().newElement();
 		t = pub.p.getGT().newElement();
-
-		s = pub.p.pairing(p.cy, c.dj); /* num_pairings++; */
-		t = pub.p.pairing(p.cy_Prime, c.djp); /* num_pairings++; */
+		s = pub.p.pairing(p.cy, c.dj);
+		t = pub.p.pairing(p.cy_Prime, c.djp);
 		t.invert();
-		s.mul(t); /* num_muls++; */
-		s.powZn(exp); /* num_exps++; */
+		s.mul(t);
+		s.powZn(exp);
 
-		r.mul(s); /* num_muls++; */
+		r.mul(s);
 	}
 
 	public static void pickSatisfyMinLeaves(CPabePolicy p, CPabeUserKey prv) {
@@ -331,48 +320,5 @@ public class CPabeTools {
 			}
 		}
 	}
-
-	public static String symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
-		System.out.println("encryption key:" + keyElement.toString());
-        // Derive the key
-        SecretKeySpec secret = CPabeTools.deriveKey(keyElement);
-        //encrypt the message
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, secret);
-        AlgorithmParameters params = cipher.getParameters();
-        byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
-        return Base64.getEncoder().encodeToString(cipher.doFinal(data)) + CPabeSettings.SPLIT + Base64.getEncoder().encodeToString(iv);
-    }
-	
-	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
-        // Derive the key
-        byte[] key = keyElement.toBytes();
-        MessageDigest sha = MessageDigest.getInstance("SHA-1");
-        key = sha.digest(key);
-        key = Arrays.copyOf(key, 16); // use only first 128 bit because of stupid java restrictions?
-        SecretKeySpec secret = new SecretKeySpec(key, "AES");
-        return secret;
-	}
-
-    public static String symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-    	System.out.println("decryption key:" + keyElement.toString());
-    	String[] encrypted = ct.cipherText.split(CPabeSettings.SPLIT);
-    	byte[] cipherText = Base64.getDecoder().decode(encrypted[0]);
-    	byte[] iv = Base64.getDecoder().decode(encrypted[1]);
-        // Derive the key
-        SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
-        // Decrypt the message
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
-        byte[] decryptedTextBytes = null;
-        try {
-            decryptedTextBytes = cipher.doFinal(cipherText);
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        }
-        return new String(decryptedTextBytes);
-    }
 
 }
