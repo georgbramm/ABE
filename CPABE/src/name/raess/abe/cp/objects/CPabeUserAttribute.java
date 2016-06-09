@@ -1,0 +1,25 @@
+package name.raess.abe.cp.objects;
+
+import org.json.simple.JSONObject;
+
+import it.unisa.dia.gas.jpbc.Element;
+
+public class CPabeUserAttribute {
+	public CPabeUserAttribute(String sval) {
+		this.description = sval;
+	}
+	public CPabeUserAttribute() {
+	}
+	public String description;		// String
+	public Element dj;				// G2
+	public Element djp;				// G1
+	
+	@SuppressWarnings("unchecked")
+	public String toString() {
+		JSONObject obj = new JSONObject();
+		obj.put("description", this.description);
+		obj.put("d", this.dj.toString());
+		obj.put("dPrime", this.djp.toString());
+		return obj.toJSONString();
+	}
+}
