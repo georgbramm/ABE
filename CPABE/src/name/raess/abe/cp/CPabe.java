@@ -98,26 +98,26 @@ public class CPabe {
 		// initialize & compute elements
 		// Public Parameters Key {PK}
 		// g
-		pk.g = pairing.getG1().newElement();
+		pk.g = pk.p.getG1().newElement();
 		pk.g.setToRandom();
 		// h
-		pk.h = pairing.getG1().newElement();
+		pk.h = pk.p.getG1().newElement();
 		pk.h = pk.g.duplicate();
 		// f
-		pk.f = pairing.getG1().newElement();
+		pk.f = pk.p.getG1().newElement();
 		pk.f = pk.g.duplicate();		
 		// g pairing
-		pk.gp = pairing.getG2().newElement();
+		pk.gp = pk.p.getG2().newElement();
 		pk.gp.setToRandom();
 		// e(g, g)^alpha
-		pk.gAlpha = pairing.getGT().newElement();
+		pk.gAlpha = pk.p.getGT().newElement();
 		
 		// Master Secret Key {MSK}
 		// beta
-		msk.beta = pairing.getZr().newElement();
+		msk.beta = pk.p.getZr().newElement();
 		msk.beta.setToRandom();	
 		// alpha
-		msk.gAlpha = pairing.getG2().newElement();
+		msk.gAlpha = pk.p.getG2().newElement();
 		msk.gAlpha = pk.gp.duplicate();
 		msk.gAlpha.powZn(pairing.getZr().newElement().setToRandom());
 		

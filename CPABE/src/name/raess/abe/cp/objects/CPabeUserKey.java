@@ -12,6 +12,8 @@ import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
@@ -82,7 +84,54 @@ public class CPabeUserKey {
 	    out.close();
 	}
 
-	public String export() {
-		return "";
+	@SuppressWarnings("unchecked")
+	public String exportBase64() throws UnsupportedEncodingException {
+		JSONObject obj = new JSONObject();
+		obj.put("d", this.d.toString().getBytes("utf-8"));
+		System.out.print("d_old:"+d.toString()+"\n");
+		JSONArray attrs = new JSONArray();
+		for(CPabeUserAttribute attr: attributes) {
+			attrs.add(attr.export());
+		}
+		obj.put("attrs", attrs);
+		String json = obj.toJSONString();
+		String b64 = Base64.getEncoder().encodeToString(json.getBytes()).replaceAll("(.{"+CPabeSettings.CHARSPERLINE+"})", "$1\n");
+		b64 = CPabeSettings.SKHEAD + CPabeSettings.versionString + b64 + CPabeSettings.SKTAIL;
+		return b64;
+	}
+
+	public boolean importBase64(String b64, CPabePublicParameters pk) {
+		// remove first two lines
+		b64 = b64.substring(b64.indexOf(CPabeSettings.versionString) + CPabeSettings.versionString.length());
+		// remove last line
+		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.SKTAIL));
+		b64 = b64.replace(CPabeSettings.NEWLINE, "");
+		byte[] data = Base64.getDecoder().decode(b64);
+		JSONParser parser = new JSONParser();
+		try{
+	         Object obj = parser.parse(new String(data));
+	         JSONObject jsonObj = (JSONObject)obj;
+	         System.out.print("json:"+jsonObj.toString()+"\n");
+	         String dString = (String)jsonObj.get("d");
+	         System.out.print("d:"+dString+"\n");
+	         this.d = pk.p.getG2().newElement();
+	         this.d.setFromBytes(dString.getBytes());
+	         System.out.print("d_new:"+d.toString());
+	         JSONArray attrs = (JSONArray)jsonObj.get("attrs");
+	         for (int i = 0; i < attrs.size(); i++) {
+	        	 String attr = (String) attrs.get(i);
+	        	 System.out.print(attr);
+	        	 //   String desc = (String) attr.get("desc");
+	        	 //   String dj = (String) attr.get("d");
+	        	 //   String djPrime = (String) attr.get("dPrime");
+	        	    //this.attributes.add(new CPabeUserAttribute(desc, dj, djPrime));
+	        	}
+	         return true;
+
+	      }catch(ParseException pe){
+	         System.out.println("position: " + pe.getPosition());
+	         System.out.println(pe);
+	         return false;
+	      }
 	}
 }

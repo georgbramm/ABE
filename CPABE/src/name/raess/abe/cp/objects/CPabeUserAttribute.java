@@ -22,7 +22,7 @@ public class CPabeUserAttribute {
 	public String description;		// String
 	public Element dj;				// G2
 	public Element djp;				// G1
-	
+
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
@@ -31,6 +31,15 @@ public class CPabeUserAttribute {
 			obj.put("d", this.dj.toString());
 			obj.put("dPrime", this.djp.toString());
 		}
+		return obj.toJSONString();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public String export() {
+		JSONObject obj = new JSONObject();
+		obj.put("desc", this.description);
+		obj.put("d", this.dj.toString());
+		obj.put("dPrime", this.djp.toString());
 		return obj.toJSONString();
 	}
 }

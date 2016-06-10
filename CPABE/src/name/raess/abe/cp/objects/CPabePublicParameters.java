@@ -31,31 +31,24 @@ public class CPabePublicParameters {
 		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream(fin);
 		Object obj = objin.readObject();
-		System.out.println(obj.toString());
     	if (obj instanceof PairingParameters) {
 			PairingParameters params = (PairingParameters) obj;
 			this.pairingParams = params;
 			this.p = PairingFactory.getPairing(this.pairingParams);
 		}
     	obj = objin.readObject();
-		System.out.println(obj.toString());
 		if (obj instanceof List<?>) {
 			List<byte[]> list = (List<byte[]>) obj;
 			this.g = this.p.getG1().newElement();
 			this.g.setFromBytes(list.get(0));
-			System.out.println("g " + this.g.toString());
 			this.gp = this.p.getG2().newElement();
 			this.gp.setFromBytes(list.get(1));
-			System.out.println("gp " + this.gp.toString());
 			this.h = this.p.getG1().newElement();
 			this.h.setFromBytes(list.get(2));
-			System.out.println("h " + this.h.toString());
 			this.f = this.p.getG1().newElement();
 			this.f.setFromBytes(list.get(3));
-			System.out.println("f " + this.f.toString());
 			this.gAlpha = this.p.getGT().newElement();
 			this.gAlpha.setFromBytes(list.get(4));
-			System.out.println("gHatAlpha " + this.gAlpha.toString());
 		}		
 	}
 
@@ -75,6 +68,7 @@ public class CPabePublicParameters {
 	    out.close();		    
 	}
 	
+	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
 		JSONObject key = new JSONObject();
