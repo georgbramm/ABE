@@ -36,17 +36,18 @@ class Start {
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
                         
       
-        String[] attributes = new String[2];
-        attributes[0] = "test";
-        attributes[1] = "raess";
+        String[] attributes = new String[3];
+        attributes[0] = "ABC";
+        attributes[1] = "georg";
+        attributes[2] = "raess";
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));	
-		
+		System.out.println(georgsKey.toString());
         //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 
-			String sJSONenc = "{\"or\":[{\"att\":\"raess\"},{\"att\":\"test\"},{\"att\":\"abc\"}]}";
+			String sJSONenc = "{\"and\":[{\"att\":\"raess\"},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));

@@ -24,7 +24,25 @@ public class CPabe {
 	
 	// our ca
 	private CPabeCA ca;
+	
+	/*
+	 *  return the master secret key {msk}
+	 *  
+	 *  @return a CPabeMasterSecret Key
+	 */
+	public CPabeMasterSecret getMasterSecretKey() {
+		return this.ca.msk;
+	}
 
+	/*
+	 *  return the public parameters key {pk}
+	 *  
+	 *  @return a CPabePublicParameters Key
+	 */
+	public CPabePublicParameters getPublicParameters() {
+		return this.ca.pk;
+	}	
+	
 	/*
 	 *  constructors a CPABE with a given cp-abe scheme using given {msk} and {pk} keys
 	 *  (given as String paths to the file(s)). If CPabeSettings.consoleKeyOutput
@@ -40,7 +58,7 @@ public class CPabe {
 		// generate a new CA with a given key pair
 		this.ca = new CPabeCA(msk, pk);
 		// and give it out to console if desired
-		if(CPabeSettings.consoleKeyOutput) {
+		if(CPabeSettings.consoleOutput) {
 			System.out.println(this.ca.toString());			
 		}
 	}
@@ -57,7 +75,7 @@ public class CPabe {
 		// generate a completely new CA upon construction
 		this.ca = CPabe.setup(pk, msk);
 		// and give it out to console if desired
-		if(CPabeSettings.consoleKeyOutput) {
+		if(CPabeSettings.consoleOutput) {
 			System.out.println(this.ca.toString());			
 		}
 	}
@@ -224,6 +242,16 @@ public class CPabe {
 		// generate new policy tree 
 		ct.policy = CPabeTools.parsePolicy(jsonPolicy);
 		
+		// and give it out to console if desired
+		if(CPabeSettings.consoleOutput) {
+			if(CPabeSettings.consoleDetails) {
+				System.out.println(ct.policy.toDetail(true));
+			}
+			else {
+				System.out.println(ct.policy.toString());
+			}
+		}
+		
 		// calculate new policy tree ( Bethencourt Goyal Algorithm ) 
 		CPabeTools.bethencourtGoyal(ct.policy, pk, s);
 		
@@ -244,28 +272,27 @@ public class CPabe {
 	 */		
 	public static byte[] decrypt(CPabePublicParameters pk, CPabeUserKey sk, CPabeCipherText ct) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
 
-		Element m;
+		// random m to recover from C Prime
+		Element m = pk.p.getGT().newElement();
+		m = ct.cPrime.duplicate();
 		
+		// if the attributes in {sk} to not math the {ct}->policy return with null and msg to console
 		if (!CPabeTools.checkSatisfy(ct.policy, sk)) {
 			System.err.println("cannot decrypt, attributes in key do not satisfy policy");
 			return null;
 		}
+		//otherwise
 		else {
-			m = pk.p.getGT().newElement();
-			CPabeTools.calcMinLeaves(ct.policy, sk);		
-			Element t = CPabeTools.decPolicyTree(ct.policy, sk, pk);			
-			m = ct.cPrime.duplicate();
-			m.mul(t);
-			m.mul(pk.p.pairing(ct.c, sk.d).invert());	
+			// calculate min leaves
+			CPabeTools.calcMinLeaves(ct.policy, sk);
+			Element one = pk.p.getZr().newElement().setToOne();
+			// and secret of bethencourt goyal tree (A)
+			Element A = CPabeTools.decPolicyTree(ct.policy, sk, pk, one);
+			// and multiply with cPrime and (1/e(C,D))
+			m.mul(A);
+			m.mul(pk.p.pairing(ct.c, sk.d).invert());
+			// now we have decrypted the abe scheme and can now aes-decrypt the base64 ciphertext
 			return CPabeTools.symDecrypt(m, ct);
 		}
-	}
-
-	public CPabeMasterSecret getMasterSecretKey() {
-		return this.ca.msk;
-	}
-
-	public CPabePublicParameters getPublicParameters() {
-		return this.ca.pk;
 	}
 }

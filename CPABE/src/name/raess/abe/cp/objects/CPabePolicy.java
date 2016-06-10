@@ -126,6 +126,10 @@ public class CPabePolicy {
 	}
 	
 	public String toString() {
+		return this.toDetail(false);
+	}
+
+	public String toDetail(boolean showDetail) {
 		if(this.k == 1 && this.attribute == null) {
 			String ret = "";
 			if(this.children != null) {
@@ -142,7 +146,12 @@ public class CPabePolicy {
 		}
 		else if(this.k == 1) {
 			if(this.hasValue) {
-				return "[{" + this.attribute + "},{" + this.cy + "},{" + this.cy_Prime + "}]";
+				if(showDetail) {
+					return "[{" + this.attribute + "},{" + this.cy + "},{" + this.cy_Prime + "}]";
+				}
+				else {
+					return "[{" + this.attribute + "}]";
+				}
 			}
 			else {
 				return "[" + this.attribute + "]";

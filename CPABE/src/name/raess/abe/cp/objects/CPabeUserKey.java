@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import it.unisa.dia.gas.jpbc.Element;
@@ -19,6 +20,7 @@ public class CPabeUserKey {
 	public Element d; 		// G2
 	public ArrayList<CPabeUserAttribute> attributes;
 	
+	@SuppressWarnings({ "resource", "unchecked" })
 	public CPabeUserKey(String loadfrom, CPabePublicParameters pk) throws ClassNotFoundException, IOException {
 		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream (fin);
@@ -46,10 +48,12 @@ public class CPabeUserKey {
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
-		obj.put("d", this.d.toString());
-		JSONObject attrs = new JSONObject();
+		if(CPabeSettings.consoleDetails) {
+			obj.put("d", this.d.toString());
+		}
+		JSONArray attrs = new JSONArray();
 		for(CPabeUserAttribute attr: attributes) {
-			attrs.put("attribute", attr.toString());
+			attrs.add(attr.toString());
 		}
 		obj.put("attributes", attrs);
 		return obj.toJSONString();
@@ -76,5 +80,9 @@ public class CPabeUserKey {
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
 	    out.close();
+	}
+
+	public String export() {
+		return "";
 	}
 }

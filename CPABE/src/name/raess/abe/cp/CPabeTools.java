@@ -112,6 +112,7 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.AND:
 	        	nodeArray = (JSONArray) policy.get(key);
+	        	System.out.println("k:"+nodeArray.size());
 	        	root = new CPabePolicy(nodeArray.size());
 	        	for (Object currentNode : nodeArray) {
 	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
@@ -120,10 +121,15 @@ public class CPabeTools {
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
 	        	break;
 	        case CPabeSettings.OF:
-	        	//make uppercase and remove all chars
-	        	String K = key.toString().toUpperCase().replaceAll("[A-Z]","");
-	        	root = new CPabePolicy(K);
 	        	nodeArray = (JSONArray) policy.get(key);
+	        	int K = Integer.parseInt(key.toString().toUpperCase().replaceAll("[A-Z]",""));
+	        	if(K>nodeArray.size()){
+	        		System.err.println("Err: policy not decryptable");
+	        		return null;
+	        	}
+	        	root = new CPabePolicy(K);
+	        	System.out.println("k:"+K);
+	        	
 	        	for (Object currentNode : nodeArray) {
 	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
 	        		stack.add(node);
@@ -154,15 +160,14 @@ public class CPabeTools {
 	public static void bethencourtGoyal(CPabePolicy p, CPabePublicParameters pub, Element e) throws NoSuchAlgorithmException {
 		int i;
 		Element r, t, h;
-		Pairing pairing = pub.p;
-		r = pairing.getZr().newElement();
-		t = pairing.getZr().newElement();
-		h = pairing.getG2().newElement();
+		r = pub.p.getZr().newElement();
+		t = pub.p.getZr().newElement();
+		h = pub.p.getG2().newElement();
 		// generate new random polynomial with fixed 0 value (e)
 		p.q = new CPabePolynomial(p.k - 1, e);
 		if (p.children == null || p.children.length == 0) {
-			p.cy = pairing.getG1().newElement();
-			p.cy_Prime = pairing.getG2().newElement();
+			p.cy = pub.p.getG1().newElement();
+			p.cy_Prime = pub.p.getG2().newElement();
 			// set h to random oracle of attribute
 			CPabeTools.randomOracle(h, p.attribute);
 			p.cy = pub.g.duplicate();;
@@ -193,52 +198,59 @@ public class CPabeTools {
 				}
 			}
 		} else {
-			for (i = 0; i < p.children.length; i++)
-				checkSatisfy(p.children[i], prv);
-
+			for (i = 0; i < p.children.length; i++) {
+				CPabeTools.checkSatisfy(p.children[i], prv);
+			}
 			l = 0;
-			for (i = 0; i < p.children.length; i++)
-				if (p.children[i].satisfiable)
+			for (i = 0; i < p.children.length; i++) {
+				if (p.children[i].satisfiable) {
 					l++;
-
-			if (l >= p.k)
+				}
+			}
+			if (l >= p.k) {
 				p.satisfiable = true;
+			}
 		}
 		return p.satisfiable;
 	}
 
-	public static Element decPolicyTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
+	public static Element decPolicyTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
+		if (p.children == null || p.children.length == 0) {
+			return CPabeTools.decLeafFlatten(p, prv, pub, exp);
+		}
+		else {
+			return CPabeTools.decInternalFlatten(p, prv, pub, exp);
+		}
+	}
+
+	private static Element decInternalFlatten(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
 		Element ret = pub.p.getGT().newElement().setToOne();
-		Element one = pub.p.getZr().newElement().setToOne();
-		CPabeTools.decNodeFlatten(ret, one, p, prv, pub);
+		for (int i = 0; i < p.satisfiableList.size(); i++) {
+			Element t = CPabeTools.lagrangeCoef(pub, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
+			ret.add(CPabeTools.decPolicyTree(p.children[p.satisfiableList.get(i) - 1], prv, pub, exp.mul(t)));
+		}
 		return ret;
 	}
 
-	private static void decNodeFlatten(Element r, Element exp, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
-		if (p.children == null || p.children.length == 0) {
-			CPabeTools.decLeafFlatten(r, exp, p, prv, pub);
-		}
-		else {
-			CPabeTools.decInternalFlatten(r, exp, p, prv, pub);
-		}
+
+	private static Element decLeafFlatten(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
+		CPabeUserAttribute c;
+		Element s, t;
+		c = prv.attributes.get(p.index);
+		s = pub.p.getGT().newElement();
+		t = pub.p.getGT().newElement();
+		s = pub.p.pairing(p.cy, c.dj);
+		t = pub.p.pairing(p.cy_Prime, c.djp);
+		t.invert();
+		s.mul(t);
+		s.powZn(exp);
+		return pub.p.getGT().newElement().setToOne().mul(s);
 	}
 
-	private static void decInternalFlatten(Element r, Element exp, CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub) {
-		int i;
-		Element t, expnew;
-		t = pub.p.getZr().newElement();
-		expnew = pub.p.getZr().newElement();
-		for (i = 0; i < p.satisfiableList.size(); i++) {
-			CPabeTools.lagrangeCoef(t, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
-			expnew = exp.duplicate();
-			expnew.mul(t);
-			decNodeFlatten(r, expnew, p.children[p.satisfiableList.get(i) - 1], prv, pub);
-		}
-	}
-
-	private static void lagrangeCoef(Element r, ArrayList<Integer> s, int i) {
+	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> s, int i) {
 		int j, k;
 		Element t;
+		Element r = pk.p.getZr().newElement();
 		t = r.duplicate();
 		r.setToOne();
 		for (k = 0; k < s.size(); k++) {
@@ -251,23 +263,7 @@ public class CPabeTools {
 			t.invert();
 			r.mul(t);
 		}
-	}
-
-
-	private static void decLeafFlatten(Element r, Element exp, CPabePolicy p,
-			CPabeUserKey prv, CPabePublicParameters pub) {
-		CPabeUserAttribute c;
-		Element s, t;
-		c = prv.attributes.get(p.index);
-		s = pub.p.getGT().newElement();
-		t = pub.p.getGT().newElement();
-		s = pub.p.pairing(p.cy, c.dj);
-		t = pub.p.pairing(p.cy_Prime, c.djp);
-		t.invert();
-		s.mul(t);
-		s.powZn(exp);
-
-		r.mul(s);
+		return r;
 	}
 
 	public static void calcMinLeaves(CPabePolicy p, CPabeUserKey prv) {
@@ -275,19 +271,20 @@ public class CPabeTools {
 		int len;
 		ArrayList<Integer> c = new ArrayList<Integer>();
 
-		if (p.children == null || p.children.length == 0)
+		if (p.children == null || p.children.length == 0) {
 			p.minLeaves = 1;
+		}
 		else {
 			len = p.children.length;
-			for (i = 0; i < len; i++)
-				if (p.children[i].satisfiable)
+			for (i = 0; i < len; i++) {
+				if (p.children[i].satisfiable) {
 					CPabeTools.calcMinLeaves(p.children[i], prv);
-
-			for (i = 0; i < len; i++)
+				}
+			}
+			for (i = 0; i < len; i++) {
 				c.add(new Integer(i));
-
+			}
 			Collections.sort(c, new CPabeComp(p));
-
 			p.satisfiableList = new ArrayList<Integer>();
 			p.minLeaves = 0;
 			l = 0;
