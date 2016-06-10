@@ -43,6 +43,7 @@ public class CPabePolicy {
 		this.k = k;
 		this.hasValue = false;
 		this.attribute = null;
+		this.children = new CPabePolicy[k];
 	}	
 	
 	// this is an attribute without a value

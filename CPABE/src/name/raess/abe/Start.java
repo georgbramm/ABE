@@ -47,7 +47,7 @@ class Start {
 		
 		try {
 
-			String sJSONenc = "{\"and\":[{\"att\":\"raess\"},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"or\":[{\"att\":\"raess\"},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));

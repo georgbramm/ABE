@@ -157,14 +157,14 @@ public class CPabeTools {
 		return root;
 	}
 
-	public static void bethencourtGoyal(CPabePolicy p, CPabePublicParameters pub, Element e) throws NoSuchAlgorithmException {
+	public static void bethencourtGoyal(CPabePolicy p, CPabePublicParameters pub, Element secret) throws NoSuchAlgorithmException {
 		int i;
-		Element r, t, h;
-		r = pub.p.getZr().newElement();
+		Element t, h;
 		t = pub.p.getZr().newElement();
 		h = pub.p.getG2().newElement();
-		// generate new random polynomial with fixed 0 value (e)
-		p.q = new CPabePolynomial(p.k - 1, e);
+		// generate new random polynomial with fixed 0 value (e) and degree k-1
+		p.q = new CPabePolynomial(p.k - 1, secret);
+		// if this is an attribute
 		if (p.children == null || p.children.length == 0) {
 			p.cy = pub.p.getG1().newElement();
 			p.cy_Prime = pub.p.getG2().newElement();
@@ -175,9 +175,9 @@ public class CPabeTools {
 			p.cy_Prime = h.duplicate();
 			p.cy_Prime.powZn(p.q.coef[0]);
 		} else {
+			// if this is a threshold gate
 			for (i = 0; i < p.children.length; i++) {
-				r.set(i + 1);
-				t = p.q.evalPoly(r);
+				t = p.q.evalPoly(pub.p.getZr().newElement().set(i + 1));
 				CPabeTools.bethencourtGoyal(p.children[i], pub, t);
 			}
 		}
@@ -223,11 +223,16 @@ public class CPabeTools {
 		}
 	}
 
-	private static Element decInternalFlatten(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
-		Element ret = pub.p.getGT().newElement().setToOne();
-		for (int i = 0; i < p.satisfiableList.size(); i++) {
-			Element t = CPabeTools.lagrangeCoef(pub, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
-			ret.add(CPabeTools.decPolicyTree(p.children[p.satisfiableList.get(i) - 1], prv, pub, exp.mul(t)));
+	private static Element decInternalFlatten(CPabePolicy policy, CPabeUserKey prv, CPabePublicParameters pk, Element exp) {
+		Element t, expnew;
+		t = pk.p.getZr().newElement();
+		expnew = pk.p.getZr().newElement();
+		Element ret = pk.p.getGT().newElement();
+		for (int i = 0; i < policy.satisfiableList.size(); i++) {
+			t = CPabeTools.lagrangeCoef(pk, policy.satisfiableList, (policy.satisfiableList.get(i)).intValue());
+			expnew = exp.duplicate();
+			expnew.mul(t);
+			ret.add(CPabeTools.decPolicyTree(policy.children[policy.satisfiableList.get(i) - 1], prv, pk, expnew));
 		}
 		return ret;
 	}
@@ -267,21 +272,19 @@ public class CPabeTools {
 	}
 
 	public static void calcMinLeaves(CPabePolicy p, CPabeUserKey prv) {
-		int i, k, l, c_i;
-		int len;
+		int k, l, c_i;
 		ArrayList<Integer> c = new ArrayList<Integer>();
 
+		// if this is an attribute
 		if (p.children == null || p.children.length == 0) {
 			p.minLeaves = 1;
 		}
 		else {
-			len = p.children.length;
-			for (i = 0; i < len; i++) {
+			// if this is a threshold gate
+			for (int i = 0; i < p.children.length; i++) {
 				if (p.children[i].satisfiable) {
 					CPabeTools.calcMinLeaves(p.children[i], prv);
 				}
-			}
-			for (i = 0; i < len; i++) {
 				c.add(new Integer(i));
 			}
 			Collections.sort(c, new CPabeComp(p));
@@ -289,7 +292,7 @@ public class CPabeTools {
 			p.minLeaves = 0;
 			l = 0;
 
-			for (i = 0; i < len && l < p.k; i++) {
+			for (int i = 0; i < p.children.length && l < p.k; i++) {
 				c_i = c.get(i).intValue(); /* c[i] */
 				if (p.children[c_i].satisfiable) {
 					l++;

@@ -252,7 +252,7 @@ public class CPabe {
 			}
 		}
 		
-		// calculate new policy tree ( Bethencourt Goyal Algorithm ) 
+		// calculate policy tree secret ( Bethencourt Goyal Algorithm ) 
 		CPabeTools.bethencourtGoyal(ct.policy, pk, s);
 		
 		// encrypt byte message using random m
