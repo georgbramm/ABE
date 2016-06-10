@@ -7,7 +7,7 @@ public class CPabeSettings {
 	public static final String versionString = "Version: jCP-ABE " + version + "\n";
 	public static final int rBits = 128;
 	public static final int qBits = 512;
-	public static final boolean consoleOutput = true;
+	public static final boolean consoleOutput = false;
 	public static final boolean consoleDetails = false;
 	
 	// key file names

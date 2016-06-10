@@ -6,6 +6,11 @@ import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 
 public class CPabeUserAttribute {
+	
+	public String description;		// String
+	public Element dj;				// G2
+	public Element djp;				// G1
+	
 	public CPabeUserAttribute(String sval) {
 		this.description = sval;
 	}
@@ -18,10 +23,6 @@ public class CPabeUserAttribute {
 		this.dj = dj;
 		this.djp = djp;
 	}	
-	
-	public String description;		// String
-	public Element dj;				// G2
-	public Element djp;				// G1
 
 	@SuppressWarnings("unchecked")
 	public String toString() {

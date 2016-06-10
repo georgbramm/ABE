@@ -41,8 +41,7 @@ class Start {
         attributes[1] = "georg";
         attributes[2] = "raess";
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
-		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));	
-		System.out.println(georgsKey.exportBase64());
+		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
 		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
         //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		

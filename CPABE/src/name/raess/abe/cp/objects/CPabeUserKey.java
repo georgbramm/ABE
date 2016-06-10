@@ -7,7 +7,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -89,7 +88,6 @@ public class CPabeUserKey {
 		JSONObject obj = new JSONObject();
 		String encodedD = org.apache.commons.codec.binary.Base64.encodeBase64String(this.d.toBytes());
 		obj.put("d", encodedD);
-		System.out.print("d_old:"+this.d.toString()+"\n");
 		JSONArray attrs = new JSONArray();
 		for(CPabeUserAttribute attr: attributes) {
 			attrs.add(attr.export());
@@ -112,20 +110,25 @@ public class CPabeUserKey {
 		try{
 	         Object obj = parser.parse(new String(data));
 	         JSONObject jsonObj = (JSONObject)obj;
-	         System.out.print("json:"+jsonObj.toString()+"\n");
 	         byte[] encodedD = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonObj.get("d"));	         
 	         this.d = pk.p.getG2().newElement();
 	         this.d.setFromBytes(encodedD);
-	         System.out.print("d_new:"+d.toString());
 	         JSONArray attrs = (JSONArray)jsonObj.get("attrs");
+	         this.attributes = new ArrayList<CPabeUserAttribute>();
 	         for (int i = 0; i < attrs.size(); i++) {
-	        	 String attr = (String) attrs.get(i);
-	        	 System.out.print(attr);
-	        	 //   String desc = (String) attr.get("desc");
-	        	 //   String dj = (String) attr.get("d");
-	        	 //   String djPrime = (String) attr.get("dPrime");
-	        	    //this.attributes.add(new CPabeUserAttribute(desc, dj, djPrime));
-	        	}
+	        	 Object attrParser = parser.parse((String) attrs.get(i));
+	        	 JSONObject jsonAttrObj = (JSONObject)attrParser;
+	        	 String desc = (String) jsonAttrObj.get("desc");
+	        	 byte[] encodedDj = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonAttrObj.get("dj"));
+	        	 byte[] encodedDjPrime = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonAttrObj.get("djPrime"));
+	        	 CPabeUserAttribute newAttribute = new CPabeUserAttribute(desc);
+	        	 newAttribute.dj = pk.p.getG2().newElement();
+	        	 newAttribute.dj.setFromBytes(encodedDj);
+	        	 newAttribute.djp = pk.p.getG1().newElement();
+	        	 newAttribute.djp.setFromBytes(encodedDjPrime);
+	        	 this.attributes.add(newAttribute);
+	         }
+	         System.out.println(this.attributes.toString());
 	         return true;
 
 	      }catch(ParseException pe){

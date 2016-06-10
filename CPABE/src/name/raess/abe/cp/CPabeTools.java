@@ -25,7 +25,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import it.unisa.dia.gas.jpbc.Element;
-import it.unisa.dia.gas.jpbc.Pairing;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.objects.CPabeCipherText;
 import name.raess.abe.cp.objects.CPabeComp;
@@ -39,8 +38,7 @@ public class CPabeTools {
 
 
 	public static String symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
-		System.out.println("encryption key:" + keyElement.toString());
-        // Derive the key
+		// Derive the key
         SecretKeySpec secret = CPabeTools.deriveKey(keyElement);
         //encrypt the message
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -61,7 +59,6 @@ public class CPabeTools {
 	}
 
     public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-    	System.out.println("decryption key:" + keyElement.toString());
     	String[] encrypted = ct.cipherText.split(CPabeSettings.SPLIT);
     	byte[] cipherText = Base64.getDecoder().decode(encrypted[0]);
     	byte[] iv = Base64.getDecoder().decode(encrypted[1]);
@@ -112,7 +109,6 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.AND:
 	        	nodeArray = (JSONArray) policy.get(key);
-	        	System.out.println("k:"+nodeArray.size());
 	        	root = new CPabePolicy(nodeArray.size());
 	        	for (Object currentNode : nodeArray) {
 	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
@@ -128,8 +124,6 @@ public class CPabeTools {
 	        		return null;
 	        	}
 	        	root = new CPabePolicy(K);
-	        	System.out.println("k:"+K);
-	        	
 	        	for (Object currentNode : nodeArray) {
 	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
 	        		stack.add(node);
