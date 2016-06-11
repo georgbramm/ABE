@@ -17,10 +17,14 @@ import org.json.simple.parser.ParseException;
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 
+/* This Class represents a User Key (SK)
+ */
 public class CPabeUserKey {
-	public Element d; 		// G2
-	public ArrayList<CPabeUserAttribute> attributes;
+	public Element d; 										// G2
+	public ArrayList<CPabeUserAttribute> attributes;		// list of attributes
 	
+	// this creates a saved {sk} from a binary file located at loadfrom using 
+	// the pairing in {pk}
 	@SuppressWarnings({ "resource", "unchecked" })
 	public CPabeUserKey(String loadfrom, CPabePublicParameters pk) throws ClassNotFoundException, IOException {
 		FileInputStream fin = new FileInputStream(loadfrom);
@@ -43,15 +47,14 @@ public class CPabeUserKey {
 		}
 	}
 	
+	// default ctor
 	public CPabeUserKey() {
 	}
 
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
-		if(CPabeSettings.consoleDetails) {
-			obj.put("d", this.d.toString());
-		}
+		obj.put("d", this.d.toString());
 		JSONArray attrs = new JSONArray();
 		for(CPabeUserAttribute attr: attributes) {
 			attrs.add(attr.toString());
@@ -94,8 +97,11 @@ public class CPabeUserKey {
 		}
 		obj.put("attrs", attrs);
 		String json = obj.toJSONString();
-		String b64 = org.apache.commons.codec.binary.Base64.encodeBase64String(json.getBytes()).replaceAll("(.{"+CPabeSettings.CHARSPERLINE+"})", "$1\n");
-		b64 = CPabeSettings.SKHEAD + CPabeSettings.versionString + b64 + CPabeSettings.SKTAIL;
+		String b64 = org.apache.commons.codec.binary.Base64.encodeBase64String(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
+		b64 = CPabeSettings.CPabeConstants.SKHEAD 
+				+ CPabeSettings.versionString 
+				+ b64 
+				+ CPabeSettings.CPabeConstants.SKTAIL;
 		return b64;
 	}
 
@@ -103,8 +109,8 @@ public class CPabeUserKey {
 		// remove first two lines
 		b64 = b64.substring(b64.indexOf(CPabeSettings.versionString) + CPabeSettings.versionString.length());
 		// remove last line
-		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.SKTAIL));
-		b64 = b64.replace(CPabeSettings.NEWLINE, "");
+		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.SKTAIL));
+		b64 = b64.replace(CPabeSettings.CPabeConstants.NEWLINE, "");
 		byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(b64);
 		JSONParser parser = new JSONParser();
 		try{
@@ -128,7 +134,6 @@ public class CPabeUserKey {
 	        	 newAttribute.djp.setFromBytes(encodedDjPrime);
 	        	 this.attributes.add(newAttribute);
 	         }
-	         System.out.println(this.attributes.toString());
 	         return true;
 
 	      }catch(ParseException pe){

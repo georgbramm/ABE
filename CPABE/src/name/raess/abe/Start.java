@@ -21,8 +21,8 @@ import name.raess.abe.cp.objects.CPabeCipherText;
 import name.raess.abe.cp.objects.CPabeUserKey;
 
 class Start {
-    public static void main(String[] args) throws NoSuchAlgorithmException, ParseException, InvalidAlgorithmParameterException, IOException, ClassNotFoundException {
-
+    @SuppressWarnings("static-access")
+	public static void main(String[] args) throws NoSuchAlgorithmException, ParseException, InvalidAlgorithmParameterException, IOException, ClassNotFoundException {
     	
     	// Start new CPabe
         //CPabe cp = new CPabe();
@@ -34,14 +34,23 @@ class Start {
         cp.getMasterSecretKey().saveAs(CPabeSettings.CPabeKeyMSK);
         // and save pk
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
-                        
-      
+        
+        System.out.println(cp.getPublicParameters().exportBase64());
+        
+        cp.getPublicParameters().importBase64(cp.getPublicParameters().exportBase64());
+        
+        System.out.println(cp.getMasterSecretKey().exportBase64());
+        
+        cp.getMasterSecretKey().importBase64(cp.getMasterSecretKey().exportBase64(), cp.getPublicParameters());
+                     
         String[] attributes = new String[3];
-        attributes[0] = "ABC";
+        attributes[0] = "raess";
         attributes[1] = "georg";
-        attributes[2] = "raess";
+        attributes[2] = "level=5";
+        
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
+		System.out.println(georgsKey.exportBase64());
 		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
         //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		

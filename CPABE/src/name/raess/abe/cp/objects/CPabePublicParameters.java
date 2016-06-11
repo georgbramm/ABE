@@ -7,14 +7,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.json.simple.JSONObject;
-
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import name.raess.abe.cp.CPabeSettings;
 
+/* This Class represents a Public Parameters Key (PK)
+ */
 public class CPabePublicParameters {
 	// pairing & parameters
 	public Pairing p;
@@ -24,8 +27,9 @@ public class CPabePublicParameters {
 	public Element gp;			// G2
 	public Element h;			// G1
 	public Element f;			// G1
-	public Element gAlpha;	// GT
+	public Element gHatAlpha;	// GT
 
+	// this creates a saved {pk} from a binary file located at loadfrom
 	@SuppressWarnings({ "unchecked", "resource" })
 	public CPabePublicParameters(String loadfrom) throws IOException, ClassNotFoundException {
 		FileInputStream fin = new FileInputStream(loadfrom);
@@ -47,14 +51,16 @@ public class CPabePublicParameters {
 			this.h.setFromBytes(list.get(2));
 			this.f = this.p.getG1().newElement();
 			this.f.setFromBytes(list.get(3));
-			this.gAlpha = this.p.getGT().newElement();
-			this.gAlpha.setFromBytes(list.get(4));
+			this.gHatAlpha = this.p.getGT().newElement();
+			this.gHatAlpha.setFromBytes(list.get(4));
 		}		
 	}
 
+	// default ctor
 	public CPabePublicParameters() {
 	}
 
+	// this saves this {pk} as a binary file located at saveas
 	public void saveAs(String saveas) throws IOException {
 		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 		List<byte[]> list = new ArrayList<byte[]>();
@@ -62,19 +68,20 @@ public class CPabePublicParameters {
 		list.add(this.gp.toBytes());		// 1
 		list.add(this.h.toBytes());			// 2
 		list.add(this.f.toBytes());			// 3
-		list.add(this.gAlpha.toBytes());	// 4
+		list.add(this.gHatAlpha.toBytes());	// 4
 		out.writeObject(this.pairingParams);
 		out.writeObject(list);
 	    out.close();		    
 	}
 	
+	// export this {pk} as json string
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
 		JSONObject key = new JSONObject();
 		key.put("g", this.g.toString());
 		key.put("gp", this.gp.toString());
-		key.put("gHatAlpha", this.gAlpha.toString());
+		key.put("gHatAlpha", this.gHatAlpha.toString());
 		key.put("h", this.h.toString());
 		key.put("f", this.f.toString());
 		key.put("pairing", this.pairingParams.toString());
@@ -82,5 +89,56 @@ public class CPabePublicParameters {
 		obj.put("name", "pk");
 		obj.put("key", key);		
 		return key.toJSONString();
+	}
+
+	// export this {pk} in classical base64 encoding
+	@SuppressWarnings("unchecked")
+	public String exportBase64() throws IOException {
+		JSONObject obj = new JSONObject();
+		obj.put("g", CPabeObjectTools.b64encode(this.g.toBytes()));
+		obj.put("gp", CPabeObjectTools.b64encode(this.gp.toBytes()));
+		obj.put("h", CPabeObjectTools.b64encode(this.h.toBytes()));
+		obj.put("f", CPabeObjectTools.b64encode(this.f.toBytes()));
+		obj.put("gHatAlpha", CPabeObjectTools.b64encode(this.gHatAlpha.toBytes()));
+		obj.put("pairing", CPabeObjectTools.b64encode(CPabeObjectTools.convertToBytes(this.pairingParams)));
+		String json = obj.toJSONString();
+		String b64 = CPabeObjectTools.b64encode(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
+		b64 = CPabeSettings.CPabeConstants.PKHEAD 
+				+ CPabeSettings.versionString 
+				+ b64 
+				+ CPabeSettings.CPabeConstants.PKTAIL;
+		return b64;
+	}	
+
+	public boolean importBase64(String b64) throws ClassNotFoundException, IOException {
+		// remove first two lines
+		b64 = b64.substring(b64.indexOf(CPabeSettings.versionString) + CPabeSettings.versionString.length());
+		// remove last line
+		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.PKTAIL));
+		// remove new lines
+		b64 = b64.replace(CPabeSettings.CPabeConstants.NEWLINE, "");
+		JSONParser parser = new JSONParser();
+		try{
+			Object obj = parser.parse(new String(CPabeObjectTools.b64decode(b64)));
+	        JSONObject jsonObj = (JSONObject)obj;
+	        PairingParameters params = (PairingParameters) CPabeObjectTools.convertFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("pairing")));
+			this.pairingParams = params;
+			this.p = PairingFactory.getPairing(this.pairingParams);
+			this.g = this.p.getG1().newElement();
+			this.g.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("g")));
+			this.gp = this.p.getG2().newElement();
+			this.gp.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("gp")));
+			this.h = this.p.getG1().newElement();
+			this.h.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("h")));
+			this.f = this.p.getG1().newElement();
+			this.f.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("f")));
+			this.gHatAlpha = this.p.getGT().newElement();
+			this.gHatAlpha.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("gHatAlpha")));
+	        return true;
+	      }catch(ParseException pe){
+	         System.out.println("position: " + pe.getPosition());
+	         System.out.println(pe);
+	         return false;
+	      }
 	}
 }

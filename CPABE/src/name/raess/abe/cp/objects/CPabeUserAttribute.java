@@ -28,10 +28,8 @@ public class CPabeUserAttribute {
 	public String toString() {
 		JSONObject obj = new JSONObject();
 		obj.put("description", this.description);
-		if(CPabeSettings.consoleDetails) {
-			obj.put("d", this.dj.toString());
-			obj.put("dPrime", this.djp.toString());
-		}
+		obj.put("d", this.dj.toString());
+		obj.put("dPrime", this.djp.toString());
 		return obj.toJSONString();
 	}
 	

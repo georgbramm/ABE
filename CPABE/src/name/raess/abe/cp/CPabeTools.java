@@ -28,6 +28,7 @@ import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.objects.CPabeCipherText;
 import name.raess.abe.cp.objects.CPabeComp;
+import name.raess.abe.cp.objects.CPabeObjectTools;
 import name.raess.abe.cp.objects.CPabePolicy;
 import name.raess.abe.cp.objects.CPabePolynomial;
 import name.raess.abe.cp.objects.CPabePublicParameters;
@@ -45,7 +46,9 @@ public class CPabeTools {
         cipher.init(Cipher.ENCRYPT_MODE, secret);
         AlgorithmParameters params = cipher.getParameters();
         byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
-        return Base64.getEncoder().encodeToString(cipher.doFinal(data)) + CPabeSettings.SPLIT + Base64.getEncoder().encodeToString(iv);
+        return CPabeObjectTools.b64encode(cipher.doFinal(data)) 
+        		+ CPabeSettings.CPabeConstants.SPLIT 
+        		+ CPabeObjectTools.b64encode(iv);
     }
 	
 	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
@@ -59,9 +62,9 @@ public class CPabeTools {
 	}
 
     public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-    	String[] encrypted = ct.cipherText.split(CPabeSettings.SPLIT);
-    	byte[] cipherText = Base64.getDecoder().decode(encrypted[0]);
-    	byte[] iv = Base64.getDecoder().decode(encrypted[1]);
+    	String[] encrypted = ct.cipherText.split(CPabeSettings.CPabeConstants.SPLIT);
+    	byte[] cipherText = CPabeObjectTools.b64decode(encrypted[0]);
+    	byte[] iv = CPabeObjectTools.b64decode(encrypted[1]);
         // Derive the key
         SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
         // Decrypt the message
@@ -98,7 +101,7 @@ public class CPabeTools {
 	        //make uppercase and remove all numbers
 			//than switch type
 	        switch(key.toString().toUpperCase().replaceAll("[^A-Z]","")) {
-	        case CPabeSettings.OR:
+	        case CPabeSettings.CPabeConstants.OR:
 	        	root = new CPabePolicy(1);
 	        	nodeArray = (JSONArray) policy.get(key);
 	        	for (Object currentNode : nodeArray) {
@@ -107,7 +110,7 @@ public class CPabeTools {
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
 	        	break;
-	        case CPabeSettings.AND:
+	        case CPabeSettings.CPabeConstants.AND:
 	        	nodeArray = (JSONArray) policy.get(key);
 	        	root = new CPabePolicy(nodeArray.size());
 	        	for (Object currentNode : nodeArray) {
@@ -116,7 +119,7 @@ public class CPabeTools {
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
 	        	break;
-	        case CPabeSettings.OF:
+	        case CPabeSettings.CPabeConstants.OF:
 	        	nodeArray = (JSONArray) policy.get(key);
 	        	int K = Integer.parseInt(key.toString().toUpperCase().replaceAll("[A-Z]",""));
 	        	if(K>nodeArray.size()){
@@ -130,15 +133,15 @@ public class CPabeTools {
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
 	        	break;
-	        case CPabeSettings.ATT:
+	        case CPabeSettings.CPabeConstants.ATT:
 	        	att = (String) policy.get(key);
 	        	root = new CPabePolicy(att);
 	        	break;
-	        case CPabeSettings.VAL:
+	        case CPabeSettings.CPabeConstants.VAL:
 	        	attValue = Integer.parseInt((String) policy.get(key));
 	        	root = new CPabePolicy(att, attValue); // 32 bit value needs 32 children =(
 	        	break;  
-	        case CPabeSettings.EQ:
+	        case CPabeSettings.CPabeConstants.EQ:
 	        	attValue = Integer.parseInt((String) policy.get(key));
 	        	root = new CPabePolicy(att, attValue); // 32 bit value needs 32 children =(	        	
 	        	break;      	
@@ -296,6 +299,37 @@ public class CPabeTools {
 				}
 			}
 		}
+	}
+
+	public static String[] convertValueAttributes(String[] attris) {
+		ArrayList<String> ret = new ArrayList<String>();
+		for(String attr: attris) {
+			// if this attribute has a value convert it to 32 new attributes
+			if(attr.contains("=")) {
+				String[] attParts = attr.split("=");
+				String attribute = attParts[0];
+				Integer value = Integer.parseInt(attParts[1]);
+				for(int i = 0; i < 32; i++) {
+					ret.add(attribute + ":" + CPabeTools.binMask(value, i));
+				}
+			}
+			// else keep it the same
+			else {
+				ret.add(attr);
+			}
+		}
+		return ret.toArray(new String[ret.size()]);
+	}
+
+	private static String binMask(Integer value, int i) {
+		String bitMask = String.join("", Collections.nCopies(32, "*"));
+		// this converts the int value in a string 
+		String binary = Integer.toBinaryString(value);
+		// and left pads it up to a length of 32 with zeros
+		binary = String.format("%32s", binary).replace(' ', '0');
+		StringBuilder attributeValue = new StringBuilder(bitMask);
+		attributeValue.setCharAt(i, binary.charAt(i));
+		return attributeValue.toString();
 	}
 
 }
