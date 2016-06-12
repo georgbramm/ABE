@@ -6,6 +6,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
+import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -43,10 +44,12 @@ class Start {
         
         cp.getMasterSecretKey().importBase64(cp.getMasterSecretKey().exportBase64(), cp.getPublicParameters());
                      
+        long date = new Date().getTime() / 1000;
+        
         String[] attributes = new String[3];
         attributes[0] = "raess";
         attributes[1] = "georg";
-        attributes[2] = "level=5";
+        attributes[2] = "date=" + date;
         
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
@@ -56,7 +59,7 @@ class Start {
 		
 		try {
 
-			String sJSONenc = "{\"and\":[{\"att\":\"raess\"},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"and\":[{\"eq\":{\"att\":\"date\", \"val\":\""+date+"\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));

@@ -37,10 +37,8 @@ public class CPabeUserAttribute {
 	public String export() {
 		JSONObject obj = new JSONObject();
 		obj.put("desc", this.description);
-		String encodedDj = org.apache.commons.codec.binary.Base64.encodeBase64String(this.dj.toBytes());
-		String encodedDjPrime = org.apache.commons.codec.binary.Base64.encodeBase64String(this.djp.toBytes());
-		obj.put("dj", encodedDj);
-		obj.put("djPrime", encodedDjPrime);
+		obj.put("dj", CPabeObjectTools.b64encode(this.dj.toBytes()));
+		obj.put("djPrime", CPabeObjectTools.b64encode(this.djp.toBytes()));
 		return obj.toJSONString();
 	}
 }

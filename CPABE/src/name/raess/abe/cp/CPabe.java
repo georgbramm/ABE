@@ -114,12 +114,11 @@ public class CPabe {
 		
 		// Master Secret Key {MSK}
 		// beta
-		msk.beta = pk.p.getZr().newElement();
-		msk.beta.setToRandom();	
+		msk.beta = pk.p.getZr().newElement().setToRandom();	
 		// alpha
 		msk.gAlpha = pk.p.getG2().newElement();
 		msk.gAlpha = pk.gp.duplicate();
-		msk.gAlpha.powZn(pairing.getZr().newElement().setToRandom());
+		msk.gAlpha.powZn(pk.p.getZr().newElement().setToRandom());
 		
 		// and now after msk.beta is computed
 		// apply msk.beta to {PK}->f^(1/beta)
@@ -270,7 +269,7 @@ public class CPabe {
 	 */		
 	public static byte[] decrypt(CPabePublicParameters pk, CPabeUserKey sk, CPabeCipherText ct) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
 
-		// random m to recover from C Prime
+		// random m to recover from {ct}->C Prime
 		Element m = pk.p.getGT().newElement();
 		m = ct.cPrime.duplicate();
 		
@@ -282,15 +281,18 @@ public class CPabe {
 		//otherwise
 		else {
 			// calculate min leaves
-			CPabeTools.calcMinLeaves(ct.policy, sk);
+			CPabeTools.calculateMinLeaves(ct.policy, sk);
 			Element one = pk.p.getZr().newElement().setToOne();
-			// and secret of bethencourt goyal tree (A)
+			// and root secret of bethencourt goyal tree (A)
 			Element A = CPabeTools.decPolicyTree(ct.policy, sk, pk, one);
 			// and multiply with cPrime and (1/e(C,D))
 			m.mul(A);
 			m.mul(pk.p.pairing(ct.c, sk.d).invert());
-			// now we have decrypted the abe scheme and can now aes-decrypt the base64 ciphertext
+			// now we have decrypted the abe scheme (and hence m). we can now aes-decrypt the base64 ciphertext
+			// using m.
 			return CPabeTools.symDecrypt(m, ct);
 		}
 	}
+	
+	// TODO (DELEGATE)
 }

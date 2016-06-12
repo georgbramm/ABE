@@ -16,6 +16,7 @@ public class CPabeCipherText {
 		obj.put("c", this.c.toString());
 		obj.put("cPrime", this.cPrime.toString());
 		obj.put("policy", this.policy.toString());
+		obj.put("ct", this.cipherText.toString());
 		return obj.toJSONString();
 	}	
 }

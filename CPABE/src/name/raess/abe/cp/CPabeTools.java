@@ -11,7 +11,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 
 import javax.crypto.BadPaddingException;
@@ -52,11 +51,13 @@ public class CPabeTools {
     }
 	
 	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
-        // Derive the key
+        // convert element to bytes
         byte[] key = keyElement.toBytes();
-        MessageDigest sha = MessageDigest.getInstance("SHA-1");
+        // try to get sha 256
+        MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        // and use element byte value
         key = sha.digest(key);
-        key = Arrays.copyOf(key, 16); // use only first 128 bit because of stupid java restrictions?
+        key = Arrays.copyOf(key, 16); // use only 128 bit because of java restrictions =(
         SecretKeySpec secret = new SecretKeySpec(key, "AES");
         return secret;
 	}
@@ -95,6 +96,7 @@ public class CPabeTools {
 		String att = null;
 		int attValue = 0;
 		JSONArray nodeArray;
+		JSONObject nodeObject;
 		CPabePolicy root = null;
 		ArrayList<CPabePolicy> stack = new ArrayList<CPabePolicy>();
 		for (Object key : policy.keySet()) {
@@ -142,15 +144,43 @@ public class CPabeTools {
 	        	root = new CPabePolicy(att, attValue); // 32 bit value needs 32 children =(
 	        	break;  
 	        case CPabeSettings.CPabeConstants.EQ:
-	        	attValue = Integer.parseInt((String) policy.get(key));
-	        	root = new CPabePolicy(att, attValue); // 32 bit value needs 32 children =(	        	
-	        	break;      	
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	root = CPabeTools.parsePolicy(nodeObject);
+	        	break;
+	        case CPabeSettings.CPabeConstants.LT:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT);
+	        	break;
+	        case CPabeSettings.CPabeConstants.GT:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT);
+	        	break;	        	
 	        default:
 	        	System.out.println("error in JSON: unknown key" + key.toString());
 	        	root = null;
 	        	break;
 	        }
 	    }
+		return root;
+	}
+
+	private static CPabePolicy parseMathPolicy(JSONObject policy, String lt) {
+		String att = null;
+		int attValue = 0;
+		CPabePolicy root = null;		
+		for (Object key : policy.keySet()) {
+	        //make uppercase and remove all numbers
+			//than switch type
+	        switch(key.toString().toUpperCase().replaceAll("[^A-Z]","")) {
+	        case CPabeSettings.CPabeConstants.ATT:
+	        	att = (String) policy.get(key);
+	        	break;
+	        case CPabeSettings.CPabeConstants.VAL:
+	        	attValue = Integer.parseInt((String) policy.get(key));
+	        	root = new CPabePolicy(att, attValue, lt); // 32 bit value needs 32 children =(
+	        	break; 
+	        }
+		}
 		return root;
 	}
 
@@ -178,7 +208,6 @@ public class CPabeTools {
 				CPabeTools.bethencourtGoyal(p.children[i], pub, t);
 			}
 		}
-
 	}
 
 	public static boolean checkSatisfy(CPabePolicy p, CPabeUserKey prv) {
@@ -268,7 +297,7 @@ public class CPabeTools {
 		return r;
 	}
 
-	public static void calcMinLeaves(CPabePolicy p, CPabeUserKey prv) {
+	public static void calculateMinLeaves(CPabePolicy p, CPabeUserKey prv) {
 		int k, l, c_i;
 		ArrayList<Integer> c = new ArrayList<Integer>();
 
@@ -280,7 +309,7 @@ public class CPabeTools {
 			// if this is a threshold gate
 			for (int i = 0; i < p.children.length; i++) {
 				if (p.children[i].satisfiable) {
-					CPabeTools.calcMinLeaves(p.children[i], prv);
+					CPabeTools.calculateMinLeaves(p.children[i], prv);
 				}
 				c.add(new Integer(i));
 			}
@@ -321,7 +350,7 @@ public class CPabeTools {
 		return ret.toArray(new String[ret.size()]);
 	}
 
-	private static String binMask(Integer value, int i) {
+	public static String binMask(Integer value, int i) {
 		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		// this converts the int value in a string 
 		String binary = Integer.toBinaryString(value);

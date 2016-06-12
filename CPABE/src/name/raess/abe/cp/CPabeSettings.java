@@ -1,6 +1,8 @@
 package name.raess.abe.cp;
 
 public class CPabeSettings {
+	
+	
 
 	// configuration
 	public static final String version = "0.0.2";
@@ -36,11 +38,11 @@ public class CPabeSettings {
 		public static final String OF = "OF";
 		public static final String ATT = "ATT";
 		public static final String VAL = "VAL";
-		public static final String EQ = "=";
-		public static final String LT = "<";
-		public static final String GT = ">";
-		public static final String LTEQ = "<=";
-		public static final String GTEQ = ">=";
+		public static final String EQ = "EQ";
+		public static final String LT = "LT";
+		public static final String GT = "GT";
+		public static final String LTEQ = "LTEQ";
+		public static final String GTEQ = "GTEQ";
 		
 		// lowercase variables in scheme
 	}
