@@ -45,7 +45,7 @@ class Start {
         String[] attributes = new String[3];
         attributes[0] = "raess";
         attributes[1] = "georg";
-        attributes[2] = "date=-77";
+        attributes[2] = "date=-128";
         
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
@@ -54,7 +54,7 @@ class Start {
 		
 		try {
 
-			String sJSONenc = "{\"and\":[{\"gt\":{\"att\":\"date\", \"val\":\"-100\"}},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"and\":[{\"lt\":{\"att\":\"date\", \"val\":\"128\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));

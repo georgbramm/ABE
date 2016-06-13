@@ -127,7 +127,7 @@ public class CPabePolicy {
 	
 	// this is a policy tree with a value given as int
 	// and a comparison given as LT (<) or GT (>)
-	// For int, from -2147483648 to 2147483647 inclusive.
+	// For attValues from -2147483648 to 2147483647 inclusive.
 	//
 	public CPabePolicy(String att, int attValue, boolean isGreater) {
 		this.attribute = att;
@@ -136,15 +136,33 @@ public class CPabePolicy {
 		// this converts the int value into a string 
 		String binaryTwoComplement = CPabeTools.convertToTwoComplement(attValue);
 		ArrayList<CPabePolicy> stack = new ArrayList<CPabePolicy>();
+		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		String binary = Integer.toBinaryString(Math.abs(attValue));
-		// if greater then and value is positive
+		// if greater then zero and value is positive
+		// first bit has to be zero	
 		if(isGreater) {
-			
+			if(attValue >= 0) {
+				// first bit zero
+				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
+				attributeValue.setCharAt(att.length() + 1, '0');
+				stack.add(new CPabePolicy(attributeValue.toString()));
+				
+			}
+			else {
+				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
+				attributeValue.setCharAt(att.length() + 1, '0');
+				stack.add(new CPabePolicy(attributeValue.toString()));
+
+			}
 		}
-		// if less then and value is negative
+		// if less then zero and value is negative
 		// first bit has to be one		
-		else {
-			
+		if(!isGreater && attValue < 0) {
+			// first bit one
+			StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
+			attributeValue.setCharAt(att.length() + 1, '1');
+			stack.add(new CPabePolicy(attributeValue.toString()));
+			k++;			
 		}
 		// otherwise we don't know the sign
 		

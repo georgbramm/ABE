@@ -214,8 +214,8 @@ public class CPabeTools {
 		h = pub.p.getG2().newElement();
 		// generate new random polynomial with fixed 0 value (e) and degree k-1
 		p.q = new CPabePolynomial(p.k - 1, secret);
-		// if this is an attribute
 		if (p.children == null || p.children.length == 0) {
+			// if this is an attribute
 			p.cy = pub.p.getG1().newElement();
 			p.cy_Prime = pub.p.getG2().newElement();
 			// set h to random oracle of attribute
@@ -288,11 +288,9 @@ public class CPabeTools {
 
 
 	private static Element decLeafFlatten(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
-		CPabeUserAttribute c;
-		Element s, t;
-		c = prv.attributes.get(p.index);
-		s = pub.p.getGT().newElement();
-		t = pub.p.getGT().newElement();
+		CPabeUserAttribute c = prv.attributes.get(p.index);
+		Element s = pub.p.getGT().newElement();
+		Element t = pub.p.getGT().newElement();
 		s = pub.p.pairing(p.cy, c.dj);
 		t = pub.p.pairing(p.cy_Prime, c.djp);
 		t.invert();
