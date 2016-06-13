@@ -185,8 +185,9 @@ public class CPabe {
 			// a new user attribute
 			CPabeUserAttribute att = new CPabeUserAttribute();
 			
-			// set description string
 			att.description = convertedAttributes[i];
+			
+			System.out.println("user-attri: " + convertedAttributes[i]);
 			
 			// calc & set Dj part
 			att.dj = pk.p.getG2().newElement();
@@ -198,11 +199,11 @@ public class CPabe {
 			att.djp = pk.g.duplicate();
 			att.djp.powZn(rj);
 			
-			// add to attributes list of {SK}
+			// add to attributes list of {sk}
 			prv.attributes.add(att);
 		}
 		
-		// and return {SK}
+		// and return {sk}
 		return prv;
 	}
 	

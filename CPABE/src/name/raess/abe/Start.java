@@ -36,30 +36,25 @@ class Start {
         // and save pk
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
         
-        System.out.println(cp.getPublicParameters().exportBase64());
-        
         cp.getPublicParameters().importBase64(cp.getPublicParameters().exportBase64());
-        
-        System.out.println(cp.getMasterSecretKey().exportBase64());
         
         cp.getMasterSecretKey().importBase64(cp.getMasterSecretKey().exportBase64(), cp.getPublicParameters());
                      
-        long date = new Date().getTime() / 1000;
+        //long date = new Date().getTime() / 1000;
         
         String[] attributes = new String[3];
         attributes[0] = "raess";
         attributes[1] = "georg";
-        attributes[2] = "date=" + date;
+        attributes[2] = "date=77";
         
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
-		System.out.println(georgsKey.exportBase64());
 		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
         //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 
-			String sJSONenc = "{\"and\":[{\"eq\":{\"att\":\"date\", \"val\":\""+date+"\"}},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"and\":[{\"eq\":{\"att\":\"date\", \"val\":\"77\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));

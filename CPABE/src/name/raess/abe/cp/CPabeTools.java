@@ -149,11 +149,19 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.CPabeConstants.LT:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT, 0);
 	        	break;
+	        case CPabeSettings.CPabeConstants.LTEQ:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT, 1);
+	        	break;	        	
 	        case CPabeSettings.CPabeConstants.GT:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT, 0);
+	        	break;
+	        case CPabeSettings.CPabeConstants.GTEQ:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT, -1);
 	        	break;	        	
 	        default:
 	        	System.out.println("error in JSON: unknown key" + key.toString());
@@ -164,7 +172,7 @@ public class CPabeTools {
 		return root;
 	}
 
-	private static CPabePolicy parseMathPolicy(JSONObject policy, String lt) {
+	private static CPabePolicy parseMathPolicy(JSONObject policy, String operation, int shift) {
 		String att = null;
 		int attValue = 0;
 		CPabePolicy root = null;		
@@ -177,7 +185,15 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.CPabeConstants.VAL:
 	        	attValue = Integer.parseInt((String) policy.get(key));
-	        	root = new CPabePolicy(att, attValue, lt); // 32 bit value needs 32 children =(
+	        	// GTEQ = GT + 1 (shift by one)
+	        	if(operation == CPabeSettings.CPabeConstants.GTEQ) {
+	        		operation = CPabeSettings.CPabeConstants.GT;
+	        	}
+	        	// LTEQ = LT - 1 (shift by minus one)
+	        	if(operation == CPabeSettings.CPabeConstants.LTEQ) {
+	        		operation = CPabeSettings.CPabeConstants.LT;
+	        	}
+	        	root = new CPabePolicy(att, attValue + shift, operation); // 32 bit value needs 32 children =(
 	        	break; 
 	        }
 		}
@@ -286,8 +302,9 @@ public class CPabeTools {
 		r.setToOne();
 		for (k = 0; k < s.size(); k++) {
 			j = s.get(k).intValue();
-			if (j == i)
+			if (j == i) {
 				continue;
+			}
 			t.set(-j);
 			r.mul(t);
 			t.set(i - j);
@@ -317,7 +334,6 @@ public class CPabeTools {
 			p.satisfiableList = new ArrayList<Integer>();
 			p.minLeaves = 0;
 			l = 0;
-
 			for (int i = 0; i < p.children.length && l < p.k; i++) {
 				c_i = c.get(i).intValue(); /* c[i] */
 				if (p.children[c_i].satisfiable) {
@@ -337,9 +353,10 @@ public class CPabeTools {
 			if(attr.contains("=")) {
 				String[] attParts = attr.split("=");
 				String attribute = attParts[0];
-				Integer value = Integer.parseInt(attParts[1]);
+				int value = Integer.parseInt(attParts[1]);
+				String mask = CPabeTools.convertToSignedBitString(value);
 				for(int i = 0; i < 32; i++) {
-					ret.add(attribute + ":" + CPabeTools.binMask(value, i));
+					ret.add(attribute + ":" + CPabeTools.replaceSignedBitString(mask, i));
 				}
 			}
 			// else keep it the same
@@ -347,18 +364,22 @@ public class CPabeTools {
 				ret.add(attr);
 			}
 		}
+		// and return new array of elements
 		return ret.toArray(new String[ret.size()]);
 	}
-
-	public static String binMask(Integer value, int i) {
+	
+	private static String replaceSignedBitString(String value, int i) {
 		String bitMask = String.join("", Collections.nCopies(32, "*"));
-		// this converts the int value in a string 
-		String binary = Integer.toBinaryString(value);
-		// and left pads it up to a length of 32 with zeros
-		binary = String.format("%32s", binary).replace(' ', '0');
 		StringBuilder attributeValue = new StringBuilder(bitMask);
-		attributeValue.setCharAt(i, binary.charAt(i));
+		attributeValue.setCharAt(i, value.charAt(i));
 		return attributeValue.toString();
 	}
 
+	//Converts an 32bit integer to an n-bit binary signed string.
+	public static String convertToSignedBitString(int myNum){
+		String binaryString = Integer.toBinaryString(Math.abs(myNum));
+		binaryString = String.format("%31s", binaryString).replace(' ', '0');
+		binaryString = (myNum <0?"1":"0") + binaryString;
+		return binaryString;
+	}
 }

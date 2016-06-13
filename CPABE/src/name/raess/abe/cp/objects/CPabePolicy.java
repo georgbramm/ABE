@@ -6,6 +6,7 @@ import java.util.Collections;
 
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
+import name.raess.abe.cp.CPabeTools;
 
 public class CPabePolicy {
 	/* attribute k */
@@ -67,7 +68,7 @@ public class CPabePolicy {
 		// of length 32 filled with *
 		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		// this converts the int value in a string 
-		String binary = Integer.toBinaryString(value);
+		String binary = CPabeTools.convertToSignedBitString(value);
 		// and left pads it up to a length of 32 with zeros
 		binary = String.format("%32s", binary).replace(' ', '0');
 		// counter for loop over binary string
@@ -118,7 +119,7 @@ public class CPabePolicy {
 			// i.e. A:*******************************1 
 			attributeValue.setCharAt(i++, binary.charAt(j));
 			// create attribute child using this string
-			System.out.println(attributeValue.toString());
+			System.out.println("poly-attri: " + attributeValue.toString());
 			CPabePolicy child = new CPabePolicy(attributeValue.toString());
 			child.hasValue = true;
 			// add to root node
@@ -130,8 +131,7 @@ public class CPabePolicy {
 		
 	}
 	
-	public CPabePolicy(String att, int attValue, String lt) {
-		
+	public CPabePolicy(String att, int attValue, String operation) {
 		this.attribute = att;
 		this.hasValue = true;
 		//this.children = new CPabePolicy[32];
@@ -139,16 +139,19 @@ public class CPabePolicy {
 		// of length 32 filled with *
 		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		// this converts the int value in a string 
-		String binary = Integer.toBinaryString(attValue);
-		switch(lt) {
-		case CPabeSettings.CPabeConstants.LT:
-			int gtc = 32 - binary.length();
-			this.k = gtc + 2;
+		String binaryString = CPabeTools.convertToSignedBitString(attValue);
+		
+		switch(operation) {
+		case CPabeSettings.CPabeConstants.LT:	
+			int gtc = 32 - binaryString.length();
+			this.k = gtc + 1;
+			// leading 0s
 			this.children = new CPabePolicy[this.k];
-			binary = String.format("%32s", binary).replace(' ', '0');
+			String binaryMask = String.format("%32s", binaryString).replace(' ', '0');
+			// set 0 values
 			for(int j = 0; j < gtc; j++) {
 				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-				attributeValue.setCharAt(att.length() + 1 + j, binary.charAt(32 - j));
+				attributeValue.setCharAt(att.length() + 1 + j, binaryMask.charAt(j));
 				// create attribute child using this string
 				System.out.println(attributeValue.toString());
 				CPabePolicy child = new CPabePolicy(attributeValue.toString());
@@ -160,73 +163,18 @@ public class CPabePolicy {
 			attributeValue.setCharAt(att.length() + 1 + gtc, '1');
 			// create attribute child using this string
 			System.out.println(attributeValue.toString());
-			CPabePolicy child = new CPabePolicy(attributeValue.toString());
+			CPabePolicy currentOnechild = new CPabePolicy(attributeValue.toString());
+			currentOnechild.hasValue = true;
+			// and add to root node
+			this.children[gtc] = currentOnechild;
+			// now add the rest of the binary string
+			CPabePolicy child = new CPabePolicy(att, Integer.parseInt(binaryString.substring(1)), operation);
 			child.hasValue = true;
 			// add to root node
 			this.children[gtc] = child;
-			
 			break;
 		case CPabeSettings.CPabeConstants.GT:
 			break;
-			
-		}
-		
-		
-		// and left pads it up to a length of 32 with zeros
-		binary = String.format("%32s", binary).replace(' ', '0');
-		// counter for loop over binary string
-		int i = att.length() + 1;
-		// loop over bitMask beginning at 
-		// length of attribute name +1 (because of :)
-		// for 32 bits length
-		for(int j = 0; j < 32; j++) {
-			/* create attribute string
-			 * i.e. for A=5 create:
-			 * A:0*******************************
-			 * A:*0******************************
-			 * A:**0*****************************
-			 * A:***0****************************
-			 * A:****0***************************
-			 * A:*****0**************************
-			 * A:******0*************************
-			 * A:*******0************************
-			 * A:********0***********************
-			 * A:*********0**********************
-			 * A:**********0*********************
-			 * A:***********0********************
-			 * A:************0*******************
-			 * A:*************0******************
-			 * A:**************0*****************
-			 * A:***************0****************
-			 * A:****************0***************
-			 * A:*****************0**************
-			 * A:******************0*************
-			 * A:*******************0************
-			 * A:********************0***********
-			 * A:*********************0**********
-			 * A:**********************0*********
-			 * A:***********************0********
-			 * A:************************0*******
-			 * A:*************************0******
-			 * A:**************************0*****
-			 * A:***************************0****
-			 * A:****************************0***
-			 * A:*****************************1**
-			 * A:******************************0*
-			 * A:*******************************1
-			 */
-			// create bitmask 
-			// i.e. A:********************************
-			StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-			// replace char at position i with value from binary string using counter j
-			// i.e. A:*******************************1 
-			attributeValue.setCharAt(i++, binary.charAt(j));
-			// create attribute child using this string
-			System.out.println(attributeValue.toString());
-			CPabePolicy child = new CPabePolicy(attributeValue.toString());
-			child.hasValue = true;
-			// add to root node
-			this.children[j] = child;
 		}
 	}
 
