@@ -187,13 +187,20 @@ public class CPabeTools {
 	        	attValue = Integer.parseInt((String) policy.get(key));
 	        	// GTEQ = GT + 1 (shift by one)
 	        	if(operation == CPabeSettings.CPabeConstants.GTEQ) {
-	        		operation = CPabeSettings.CPabeConstants.GT;
+	        		root = new CPabePolicy(att, attValue + shift, true); // 32 bit value needs 32 children =(
+	        	}
+	        	// GT
+	        	else if(operation == CPabeSettings.CPabeConstants.GT) {
+	        		root = new CPabePolicy(att, attValue, true); // 32 bit value needs 32 children =(
 	        	}
 	        	// LTEQ = LT - 1 (shift by minus one)
-	        	if(operation == CPabeSettings.CPabeConstants.LTEQ) {
-	        		operation = CPabeSettings.CPabeConstants.LT;
+	        	else if(operation == CPabeSettings.CPabeConstants.LTEQ) {
+	        		root = new CPabePolicy(att, attValue + shift, false); // 32 bit value needs 32 children =(
 	        	}
-	        	root = new CPabePolicy(att, attValue + shift, operation); // 32 bit value needs 32 children =(
+	        	// LT
+	        	else if(operation == CPabeSettings.CPabeConstants.LT) {
+	        		root = new CPabePolicy(att, attValue, false); // 32 bit value needs 32 children =(
+	        	}
 	        	break; 
 	        }
 		}
@@ -354,7 +361,7 @@ public class CPabeTools {
 				String[] attParts = attr.split("=");
 				String attribute = attParts[0];
 				int value = Integer.parseInt(attParts[1]);
-				String mask = CPabeTools.convertToSignedBitString(value);
+				String mask = CPabeTools.convertToTwoComplement(value);
 				for(int i = 0; i < 32; i++) {
 					ret.add(attribute + ":" + CPabeTools.replaceSignedBitString(mask, i));
 				}
@@ -376,10 +383,12 @@ public class CPabeTools {
 	}
 
 	//Converts an 32bit integer to an n-bit binary signed string.
-	public static String convertToSignedBitString(int myNum){
-		String binaryString = Integer.toBinaryString(Math.abs(myNum));
-		binaryString = String.format("%31s", binaryString).replace(' ', '0');
-		binaryString = (myNum <0?"1":"0") + binaryString;
-		return binaryString;
+	public static String convertToTwoComplement(int myNum){
+		if(myNum > 0) {
+			return String.format("%32s", Integer.toBinaryString(myNum)).replace(' ', '0');
+		}
+		else {
+			return String.format("%32s", Integer.toBinaryString(myNum)).replace(' ', '1');
+		}
 	}
 }

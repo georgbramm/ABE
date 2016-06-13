@@ -48,7 +48,7 @@ public class CPabePolicy {
 		this.children = new CPabePolicy[k];
 	}	
 	
-	// this is an attribute without a value
+	// this is an policy attribute without a value
 	public CPabePolicy(String s) {
 		this.k = 1;
 		this.hasValue = false;
@@ -56,7 +56,7 @@ public class CPabePolicy {
 		this.children = null;
 	}
 	
-	// this is an attribute with a value given as int
+	// this is a policy tree with a value given as int
 	// For int, from -2147483648 to 2147483647 inclusive, 
 	// converted to bitmask with 32 bits -> i.e. 32 children
 	public CPabePolicy(String att, int value) {
@@ -68,9 +68,7 @@ public class CPabePolicy {
 		// of length 32 filled with *
 		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		// this converts the int value in a string 
-		String binary = CPabeTools.convertToSignedBitString(value);
-		// and left pads it up to a length of 32 with zeros
-		binary = String.format("%32s", binary).replace(' ', '0');
+		String binary = CPabeTools.convertToTwoComplement(value);
 		// counter for loop over binary string
 		int i = att.length() + 1;
 		// loop over bitMask beginning at 
@@ -127,29 +125,34 @@ public class CPabePolicy {
 		}
 	}
 	
-	public CPabePolicy() {
-		
-	}
-	
-	public CPabePolicy(String att, int attValue, String operation) {
+	// this is a policy tree with a value given as int
+	// and a comparison given as LT (<) or GT (>)
+	// For int, from -2147483648 to 2147483647 inclusive.
+	//
+	public CPabePolicy(String att, int attValue, boolean isGreater) {
 		this.attribute = att;
 		this.hasValue = true;
-		//this.children = new CPabePolicy[32];
-		// this generates a string
-		// of length 32 filled with *
-		String bitMask = String.join("", Collections.nCopies(32, "*"));
-		// this converts the int value in a string 
-		String binaryString = CPabeTools.convertToSignedBitString(attValue);
+		int k = 0;
+		// this converts the int value into a string 
+		String binaryTwoComplement = CPabeTools.convertToTwoComplement(attValue);
+		ArrayList<CPabePolicy> stack = new ArrayList<CPabePolicy>();
+		String binary = Integer.toBinaryString(Math.abs(attValue));
+		// if greater then and value is positive
+		if(isGreater) {
+			
+		}
+		// if less then and value is negative
+		// first bit has to be one		
+		else {
+			
+		}
+		// otherwise we don't know the sign
 		
-		switch(operation) {
-		case CPabeSettings.CPabeConstants.LT:	
-			int gtc = 32 - binaryString.length();
-			this.k = gtc + 1;
-			// leading 0s
-			this.children = new CPabePolicy[this.k];
-			String binaryMask = String.format("%32s", binaryString).replace(' ', '0');
-			// set 0 values
-			for(int j = 0; j < gtc; j++) {
+		/*
+		// leading 0s
+		String binaryMask = String.format("%31s", binaryString).replace(' ', '0');
+		// set 0 values
+		for(int j = 0; j < gtc; j++) {
 				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
 				attributeValue.setCharAt(att.length() + 1 + j, binaryMask.charAt(j));
 				// create attribute child using this string
@@ -172,10 +175,14 @@ public class CPabePolicy {
 			child.hasValue = true;
 			// add to root node
 			this.children[gtc] = child;
-			break;
-		case CPabeSettings.CPabeConstants.GT:
-			break;
-		}
+			*/
+		this.k = stack.size();
+		this.children = stack.toArray(new CPabePolicy[stack.size()]);
+	}
+	
+	// default ctor
+	public CPabePolicy() {
+		
 	}
 
 	public String toString() {
