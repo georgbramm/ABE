@@ -30,6 +30,8 @@ public class CPabeSettings {
 		public static final String MSKTAIL = NEWLINE + "-----END CPABE MASTER KEY BLOCK-----";
 		public static final String SKHEAD = "-----BEGIN CPABE USER KEY BLOCK-----" + NEWLINE;
 		public static final String SKTAIL = NEWLINE + "-----END CPABE USER KEY BLOCK-----";	
+		public static final String CTHEAD = "-----BEGIN CPABE CIPHERTEXT BLOCK-----" + NEWLINE;
+		public static final String CTTAIL = NEWLINE + "-----END CPABE CIPHERTEXT BLOCK-----";	
 		public static final int CHARSPERLINE = 64;
 		
 		// uppercase policy variables in json structure 

@@ -45,20 +45,23 @@ class Start {
         String[] attributes = new String[3];
         attributes[0] = "raess";
         attributes[1] = "georg";
-        attributes[2] = "date=-128";
+        attributes[2] = "date=55";
         
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
-		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
+		//georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
         //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 
-			String sJSONenc = "{\"and\":[{\"lt\":{\"att\":\"date\", \"val\":\"128\"}},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"and\":[{\"eq\":{\"att\":\"date\", \"val\":\"55\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
+			System.out.println(ct.toString());
+			//System.out.println(ct.exportBase64());
+			ct.importBase64(ct.exportBase64(), cp.getPublicParameters());
+			System.out.println(ct.toString());
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));
-			
 		} catch (IOException e) {
 			System.out.println("error parsing policy");
 		} catch (InvalidKeyException e) {

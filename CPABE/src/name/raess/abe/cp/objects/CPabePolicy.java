@@ -1,35 +1,49 @@
 package name.raess.abe.cp.objects;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.CPabeTools;
 
 public class CPabePolicy {
-	/* attribute k */
+	
+	// this will be exported
+	// attribute k
 	public int k;
-	/* attribute string if leaf, otherwise null */
+	// attribute string if leaf, otherwise null
 	public String attribute;
-	/* true if leaf with value, otherwise false */
+	// true if leaf with value, otherwise false
 	public boolean hasValue;
-	// C and Cprime are a part of this policy
+	// C and Cprime for every leaf attribute
 	public Element cy;
-	public Element cy_Prime;
+	public Element cyPrime;
 	/* array of children if this
 	 * is a threshold gate 
      * it is 0 for leaves 
      * otherwise it is equal num */
 	public CPabePolicy[] children;
-	/* used during encryption */
+	
+	// only used during encryption -> not exported or saved 
+	// polynomial for this policy
 	public CPabePolynomial q;
-	/* used during decryption */
+	// only used during encryption -> not exported or saved 
+	// is this policy satisfiable
 	public boolean satisfiable;
-	/* index in parrent children arraylist */
+	// only used during encryption -> not exported or saved 
+	// index in parrent children arraylist 
 	public int index;
+	// only used during encryption -> not exported or saved 
+	// satisfiable List
 	public ArrayList<Integer> satisfiableList = new ArrayList<Integer>();
+	// only used during encryption -> not exported or saved 
+	// minimum leaves
 	public int minLeaves;
 	
 	// this is a threshhold gate
@@ -61,8 +75,8 @@ public class CPabePolicy {
 	// converted to bitmask with 32 bits -> i.e. 32 children
 	public CPabePolicy(String att, int value) {
 		this.k = 32;
-		this.attribute = att;
-		this.hasValue = true;
+		this.attribute = null;
+		this.hasValue = false;
 		this.children = new CPabePolicy[32];
 		// this generates a string
 		// of length 32 filled with *
@@ -203,51 +217,54 @@ public class CPabePolicy {
 		
 	}
 
+	// imports a byte[] policy
+	public CPabePolicy(byte[] b64decode) {
+		// TODO Auto-generated constructor stub
+	}
+
 	public String toString() {
 		return this.toDetail(false);
 	}
 
 	public String toDetail(boolean showDetail) {
-		if(this.k == 1 && this.attribute == null) {
-			String ret = "";
+		String ret = "";
+		if(this.k == 1 && !this.hasValue) {
 			if(this.children != null) {
 				ret += "(";
 				for (int i = 0; i < this.children.length; i++) {
 					ret += this.children[i].toString();
 					if(i < this.children.length - 1) {
-						ret += " || ";
+						ret += " or ";
 					}
 				}
 				ret += ")";
 			}
-			return ret;
 		}
-		else if(this.k == 1) {
+		else if(this.k == 1 && this.hasValue) {
 			if(this.hasValue) {
 				if(showDetail) {
-					return "[{" + this.attribute + "},{" + this.cy + "},{" + this.cy_Prime + "}]";
+					ret = "[{" + this.attribute + "},{" + this.cy + "},{" + this.cyPrime + "}]";
 				}
 				else {
-					return "[{" + this.attribute + "}]";
+					ret = "[{" + this.attribute + "}]";
 				}
 			}
 			else {
-				return "[" + this.attribute + "]";
+				ret = "[" + this.attribute + "]";
 			}
 		}
-		else if(this.k == this.children.length) {
-			String ret = "( ";
+		else if(this.children != null && this.k == this.children.length) {
+			ret = "( ";
 			for (int i = 0; i < this.children.length; i++) {
 				ret += this.children[i].toString();
 				if(i < this.children.length - 1) {
-					ret += " && ";
+					ret += " and ";
 				}
 			}
 			ret += " )";
-			return ret;
 		}
-		else {
-			String ret = "(" + this.k + "OF ";
+		else if(this.children != null) {
+			ret = "(" + this.k + "OF ";
 			for (int i = 0; i < this.children.length; i++) {
 				ret += this.children[i].toString();
 				if(i < this.children.length - 1) {
@@ -255,7 +272,44 @@ public class CPabePolicy {
 				}
 			}
 			ret += ")";
-			return ret;
 		}
+		return ret;
 	}
+	
+	public List<byte[]> toByteList() {
+		List<byte[]> list = new ArrayList<byte[]>();
+		byte[] hasValue = new byte[1];
+		if(this.hasValue) {
+			hasValue[0] = 1;
+		}
+		else {
+			hasValue[0] = 0;
+		}
+		list.add(Integer.toString(this.k).getBytes());
+		list.add(hasValue);
+		// this is a leaf
+		if(this.hasValue) {
+			list.add(this.attribute.getBytes());
+			list.add(this.cy.toBytes());
+			list.add(this.cyPrime.toBytes());
+		}
+		// this is a threshold gate
+		else {
+			for(int x = 0;x < this.children.length; x++) {
+				List<byte[]> child = this.children[x].toByteList();
+				list.addAll(child);
+			}
+		}
+		return list;
+	}
+/*
+	public byte[] getBytes() {
+		return this.toByteList().toString().getBytes();
+		byte[] byteArray = new byte[list.size()];
+		for (int index = 0; index < list.size(); index++) {
+			byte[] h = (byte[]) list.get(index);
+			byteArray[index] = h;
+		}
+		return byteArray;
+	}*/
 }

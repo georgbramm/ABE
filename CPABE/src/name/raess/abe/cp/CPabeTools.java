@@ -217,13 +217,13 @@ public class CPabeTools {
 		if (p.children == null || p.children.length == 0) {
 			// if this is an attribute
 			p.cy = pub.p.getG1().newElement();
-			p.cy_Prime = pub.p.getG2().newElement();
+			p.cyPrime = pub.p.getG2().newElement();
 			// set h to random oracle of attribute
 			CPabeTools.randomOracle(h, p.attribute);
 			p.cy = pub.g.duplicate();;
 			p.cy.powZn(p.q.coef[0]); 	
-			p.cy_Prime = h.duplicate();
-			p.cy_Prime.powZn(p.q.coef[0]);
+			p.cyPrime = h.duplicate();
+			p.cyPrime.powZn(p.q.coef[0]);
 		} else {
 			// if this is a threshold gate
 			for (i = 0; i < p.children.length; i++) {
@@ -292,7 +292,7 @@ public class CPabeTools {
 		Element s = pub.p.getGT().newElement();
 		Element t = pub.p.getGT().newElement();
 		s = pub.p.pairing(p.cy, c.dj);
-		t = pub.p.pairing(p.cy_Prime, c.djp);
+		t = pub.p.pairing(p.cyPrime, c.djp);
 		t.invert();
 		s.mul(t);
 		s.powZn(exp);
