@@ -37,6 +37,7 @@ public class CPabeCipherText {
 		list.add(this.c.toBytes());
 		list.add(this.cPrime.toBytes());
 		list.add(this.cipherText.getBytes());
+		// policy als json ?
 		list.addAll(this.policy.toByteList());
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);

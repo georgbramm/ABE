@@ -78,9 +78,6 @@ public class CPabePolicy {
 		this.attribute = null;
 		this.hasValue = false;
 		this.children = new CPabePolicy[32];
-		// this generates a string
-		// of length 32 filled with *
-		String bitMask = String.join("", Collections.nCopies(32, "*"));
 		// this converts the int value in a string 
 		String binary = CPabeTools.convertToTwoComplement(value);
 		// counter for loop over binary string
@@ -126,13 +123,9 @@ public class CPabePolicy {
 			 */
 			// create bitmask 
 			// i.e. A:********************************
-			StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-			// replace char at position i with value from binary string using counter j
-			// i.e. A:*******************************1 
-			attributeValue.setCharAt(i++, binary.charAt(j));
-			// create attribute child using this string
-			System.out.println("poly-attri: " + attributeValue.toString());
-			CPabePolicy child = new CPabePolicy(attributeValue.toString());
+			String attValue = this.attStringBinMaskValue(att, i++, binary.charAt(j));
+			System.out.println("poly-attri: " + attValue);
+			CPabePolicy child = new CPabePolicy(attValue);
 			child.hasValue = true;
 			// add to root node
 			this.children[j] = child;
@@ -143,40 +136,39 @@ public class CPabePolicy {
 	// and a comparison given as LT (<) or GT (>)
 	// For attValues from -2147483648 to 2147483647 inclusive.
 	//
-	public CPabePolicy(String att, int attValue, boolean isGreater) {
-		this.attribute = att;
-		this.hasValue = true;
-		int k = 0;
+	public CPabePolicy(String att, int value, boolean isGreater) {
+		this.attribute = null;
+		this.hasValue = false;
 		// this converts the int value into a string 
-		String binaryTwoComplement = CPabeTools.convertToTwoComplement(attValue);
+		String binaryTwoComplement = CPabeTools.convertToTwoComplement(value);
+		// fuer den ausblick
 		ArrayList<CPabePolicy> stack = new ArrayList<CPabePolicy>();
-		String bitMask = String.join("", Collections.nCopies(32, "*"));
-		String binary = Integer.toBinaryString(Math.abs(attValue));
+		String binary = Integer.toBinaryString(Math.abs(value));
 		// if greater then zero and value is positive
 		// first bit has to be zero	
 		if(isGreater) {
-			if(attValue >= 0) {
-				// first bit zero
-				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-				attributeValue.setCharAt(att.length() + 1, '0');
-				stack.add(new CPabePolicy(attributeValue.toString()));
-				
+			if(value >= 0) {
+				// (first bit zero) && ((1 of the intermediate bits one) || (greater than absolute remainder))
+				this.k = 2;
+				this.children = new CPabePolicy[2];
+				this.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '0'));
+				this.children[1] = this.generatePolicy(att, binary, isGreater);
 			}
 			else {
-				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-				attributeValue.setCharAt(att.length() + 1, '0');
-				stack.add(new CPabePolicy(attributeValue.toString()));
-
+				// (first bit zero) || ((first bit one) && (lesser than absolute remainder))
 			}
 		}
-		// if less then zero and value is negative
-		// first bit has to be one		
-		if(!isGreater && attValue < 0) {
-			// first bit one
-			StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-			attributeValue.setCharAt(att.length() + 1, '1');
-			stack.add(new CPabePolicy(attributeValue.toString()));
-			k++;			
+		else {
+			if(value < 0) {
+				// (first bit one) && ((1 of the intermediate bits zero) || (greater than remainder))
+				this.k = 2;
+				this.children = new CPabePolicy[2];				
+				this.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '1'));
+				this.children[1] = this.generatePolicy(att, binary, isGreater);
+			}
+			else {
+				// (first bit one) || ((first bit zero) && (lesser than absolute remainder))
+			}			
 		}
 		// otherwise we don't know the sign
 		
@@ -210,6 +202,20 @@ public class CPabePolicy {
 			*/
 		this.k = stack.size();
 		this.children = stack.toArray(new CPabePolicy[stack.size()]);
+	}
+
+	private CPabePolicy generatePolicy(String att, String binary, boolean isGreater) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	// create a attribute string with value as a string bit mask 
+	// covering everything but one single bit with *
+	// i.e.: A:*******************************1
+	public String attStringBinMaskValue(String att, int position, char value) {
+		StringBuilder attributeValue = new StringBuilder(att + ":" + String.join("", Collections.nCopies(32, "*")));
+		attributeValue.setCharAt(position, value);
+		return attributeValue.toString();
 	}
 	
 	// default ctor
