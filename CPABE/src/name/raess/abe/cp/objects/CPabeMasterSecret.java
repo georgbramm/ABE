@@ -23,7 +23,9 @@ import name.raess.abe.cp.CPabeSettings;
 public class CPabeMasterSecret {
 	public Element beta; 		// Zr
 	public Element gAlpha; 		// G2
-
+	// default ctor
+	public CPabeMasterSecret() {
+	}
 	// this creates a saved {msk} from a binary file located at loadfrom using 
 	// the pairing in {pk}
 	@SuppressWarnings({ "resource", "unchecked" })
@@ -39,11 +41,6 @@ public class CPabeMasterSecret {
 			this.gAlpha.setFromBytes(list.get(1));
 		}
 	}
-
-	// default ctor
-	public CPabeMasterSecret() {
-	}
-
 	// saves this {msk} in binary format
 	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
@@ -52,8 +49,7 @@ public class CPabeMasterSecret {
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
 	    out.close();
-	}	
-	
+	}
 	// returns this {msk} as json String
 	@SuppressWarnings({ "unchecked" })
 	public String toString() {
@@ -65,7 +61,6 @@ public class CPabeMasterSecret {
 		obj.put("key", key);
 		return obj.toJSONString();
 	}
-
 	@SuppressWarnings("unchecked")
 	public String exportBase64() {
 		JSONObject obj = new JSONObject();

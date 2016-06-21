@@ -291,12 +291,11 @@ public class CPabePolicy {
 		return obj;
 	}
 	
-	// construct this policy from a JSONObject
+	// construct this policy from a JSONObject representing a policy
 	public void fromJSON(JSONObject jsonObj, CPabePublicParameters pk) throws ParseException {
         byte[] encodedK = CPabeObjectTools.b64decode((String) jsonObj.get("k"));	         
         this.k = new BigInteger(encodedK).intValue();
         int isLeaf = Integer.parseInt((String) jsonObj.get("isLeaf"));
-        JSONParser parser = new JSONParser();
         if(isLeaf == 1) {
         	this.attribute = (String) jsonObj.get("attribute");
         	this.hasValue = (String) jsonObj.get("hasValue") == "true" ? true : false;

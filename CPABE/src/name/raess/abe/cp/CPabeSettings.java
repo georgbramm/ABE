@@ -1,9 +1,6 @@
 package name.raess.abe.cp;
 
 public class CPabeSettings {
-	
-	
-
 	// configuration
 	public static final String version = "0.0.2";
 	public static final String versionString = "Version: jCP-ABE " + version + "\n";
@@ -11,20 +8,15 @@ public class CPabeSettings {
 	public static final int qBits = 512;
 	public static final boolean consoleOutput = false;
 	public static final boolean consoleBase64 = false;
-	
 	// key file names
 	public static final String CPabeKeyMSK = "keys/abe-msk";
 	public static final String CPabeKeyPK = "keys/abe-pk";
+	public static final String CPabeKeyCT = "keys/abe-ct";
 	public static final String CPabeKeySK = "keys/abe-sk-$username";
 	
 	public static class CPabeConstants {
-		
-		// split string for AES encryption
-		public static final String SPLIT = "\n---- AES SPLIT ----\n";
-		
 		// abe attribute value split
-		public static final String AVSPLIT = "@@";
-		
+		public static final String AVSPLIT = "@:";
 		// key export header & tails
 		public static final String NEWLINE = System.getProperty("line.separator");
 		public static final String PKHEAD = "-----BEGIN CPABE PUBLIC KEY BLOCK-----" + NEWLINE;

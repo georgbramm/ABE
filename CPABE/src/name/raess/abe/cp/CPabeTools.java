@@ -36,7 +36,7 @@ import name.raess.abe.cp.objects.CPabeUserKey;
 public class CPabeTools {
 
 
-	public static String symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
+	public static String[] symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
 		// Derive the key
         SecretKeySpec secret = CPabeTools.deriveKey(keyElement);
         //encrypt the message
@@ -44,9 +44,10 @@ public class CPabeTools {
         cipher.init(Cipher.ENCRYPT_MODE, secret);
         AlgorithmParameters params = cipher.getParameters();
         byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
-        return CPabeObjectTools.b64encode(cipher.doFinal(data)) 
-        		+ CPabeSettings.CPabeConstants.SPLIT 
-        		+ CPabeObjectTools.b64encode(iv);
+        String[] ret = new String[2];
+        ret[0] = CPabeObjectTools.b64encode(cipher.doFinal(data));
+        ret[1] = CPabeObjectTools.b64encode(iv);
+        return ret;
     }
 	
 	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
@@ -62,9 +63,8 @@ public class CPabeTools {
 	}
 
     public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-    	String[] encrypted = ct.cipherText.split(CPabeSettings.CPabeConstants.SPLIT);
-    	byte[] cipherText = CPabeObjectTools.b64decode(encrypted[0]);
-    	byte[] iv = CPabeObjectTools.b64decode(encrypted[1]);
+    	byte[] cipherText = CPabeObjectTools.b64decode(ct.cipherText);
+    	byte[] iv = CPabeObjectTools.b64decode(ct.iv);
         // Derive the key
         SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
         // Decrypt the message
@@ -263,16 +263,16 @@ public class CPabeTools {
 		return p.satisfiable;
 	}
 
-	public static Element decPolicyTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
+	public static Element decTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
 		if (p.children == null || p.children.length == 0) {
-			return CPabeTools.decLeafFlatten(p, prv, pub, exp);
+			return CPabeTools.decLeaf(p, prv, pub, exp);
 		}
 		else {
-			return CPabeTools.decInternalFlatten(p, prv, pub, exp);
+			return CPabeTools.decThresholdGate(p, prv, pub, exp);
 		}
 	}
 
-	private static Element decInternalFlatten(CPabePolicy policy, CPabeUserKey prv, CPabePublicParameters pk, Element exp) {
+	private static Element decThresholdGate(CPabePolicy policy, CPabeUserKey prv, CPabePublicParameters pk, Element exp) {
 		Element t, expnew;
 		t = pk.p.getZr().newElement();
 		expnew = pk.p.getZr().newElement();
@@ -281,13 +281,13 @@ public class CPabeTools {
 			t = CPabeTools.lagrangeCoef(pk, policy.satisfiableList, (policy.satisfiableList.get(i)).intValue());
 			expnew = exp.duplicate();
 			expnew.mul(t);
-			ret.add(CPabeTools.decPolicyTree(policy.children[policy.satisfiableList.get(i) - 1], prv, pk, expnew));
+			ret.add(CPabeTools.decTree(policy.children[policy.satisfiableList.get(i) - 1], prv, pk, expnew));
 		}
 		return ret;
 	}
 
 
-	private static Element decLeafFlatten(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
+	private static Element decLeaf(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
 		CPabeUserAttribute c = prv.attributes.get(p.index);
 		Element s = pub.p.getGT().newElement();
 		Element t = pub.p.getGT().newElement();

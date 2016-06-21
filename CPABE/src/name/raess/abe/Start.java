@@ -57,6 +57,9 @@ class Start {
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			ct.importBase64(ct.exportBase64(), cp.getPublicParameters());
+			ct.saveAs(CPabeSettings.CPabeKeyCT);
+			ct = null;
+			ct = new CPabeCipherText(CPabeSettings.CPabeKeyCT, cp.getPublicParameters());
 			System.out.println(ct.policy.toJSON().toJSONString());
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));
 		} catch (IOException e) {
