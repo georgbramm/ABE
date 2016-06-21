@@ -22,6 +22,9 @@ public class CPabeSettings {
 		// split string for AES encryption
 		public static final String SPLIT = "\n---- AES SPLIT ----\n";
 		
+		// abe attribute value split
+		public static final String AVSPLIT = "@@";
+		
 		// key export header & tails
 		public static final String NEWLINE = System.getProperty("line.separator");
 		public static final String PKHEAD = "-----BEGIN CPABE PUBLIC KEY BLOCK-----" + NEWLINE;

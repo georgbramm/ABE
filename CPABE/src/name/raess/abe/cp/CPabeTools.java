@@ -186,20 +186,21 @@ public class CPabeTools {
 	        case CPabeSettings.CPabeConstants.VAL:
 	        	attValue = Integer.parseInt((String) policy.get(key));
 	        	// GTEQ = GT + 1 (shift by one)
+	        	// 32 bit value needs 32 children =(
 	        	if(operation == CPabeSettings.CPabeConstants.GTEQ) {
-	        		root = new CPabePolicy(att, attValue + shift, true); // 32 bit value needs 32 children =(
+	        		root = new CPabePolicy(att, attValue + shift, true); 
 	        	}
 	        	// GT
 	        	else if(operation == CPabeSettings.CPabeConstants.GT) {
-	        		root = new CPabePolicy(att, attValue, true); // 32 bit value needs 32 children =(
+	        		root = new CPabePolicy(att, attValue, true);
 	        	}
 	        	// LTEQ = LT - 1 (shift by minus one)
 	        	else if(operation == CPabeSettings.CPabeConstants.LTEQ) {
-	        		root = new CPabePolicy(att, attValue + shift, false); // 32 bit value needs 32 children =(
+	        		root = new CPabePolicy(att, attValue + shift, false);
 	        	}
 	        	// LT
 	        	else if(operation == CPabeSettings.CPabeConstants.LT) {
-	        		root = new CPabePolicy(att, attValue, false); // 32 bit value needs 32 children =(
+	        		root = new CPabePolicy(att, attValue, false);
 	        	}
 	        	break; 
 	        }
@@ -212,7 +213,7 @@ public class CPabeTools {
 		Element t, h;
 		t = pub.p.getZr().newElement();
 		h = pub.p.getG2().newElement();
-		// generate new random polynomial with fixed 0 value (e) and degree k-1
+		// generate new random polynomial with fixed zero value (secret) and degree k-1
 		p.q = new CPabePolynomial(p.k - 1, secret);
 		if (p.children == null || p.children.length == 0) {
 			// if this is an attribute
@@ -240,7 +241,7 @@ public class CPabeTools {
 		if (p.children == null || p.children.length == 0) {
 			for (i = 0; i < prv.attributes.size(); i++) {
 				prvAttr = prv.attributes.get(i).description;
-				if (prvAttr.compareTo(p.attribute) == 0) {
+				if (p != null && prvAttr.compareTo(p.attribute) == 0) {
 					p.satisfiable = true;
 					p.index = i;
 					break;
@@ -307,20 +308,19 @@ public class CPabeTools {
 		r.setToOne();
 		for (k = 0; k < s.size(); k++) {
 			j = s.get(k).intValue();
-			if (j == i) {
-				continue;
+			if (j != i) {
+				t.set(-j);
+				r.mul(t);
+				t.set(i - j);
+				t.invert();
+				r.mul(t);
 			}
-			t.set(-j);
-			r.mul(t);
-			t.set(i - j);
-			t.invert();
-			r.mul(t);
 		}
 		return r;
 	}
 
 	public static void calculateMinLeaves(CPabePolicy p, CPabeUserKey prv) {
-		int k, l, c_i;
+		int k, l;
 		ArrayList<Integer> c = new ArrayList<Integer>();
 
 		// if this is an attribute
@@ -340,11 +340,11 @@ public class CPabeTools {
 			p.minLeaves = 0;
 			l = 0;
 			for (int i = 0; i < p.children.length && l < p.k; i++) {
-				c_i = c.get(i).intValue(); /* c[i] */
-				if (p.children[c_i].satisfiable) {
+				int cI = c.get(i).intValue(); /* c[i] */
+				if (p.children[cI].satisfiable) {
 					l++;
-					p.minLeaves += p.children[c_i].minLeaves;
-					k = c_i + 1;
+					p.minLeaves += p.children[cI].minLeaves;
+					k = cI + 1;
 					p.satisfiableList.add(new Integer(k));
 				}
 			}
@@ -361,7 +361,7 @@ public class CPabeTools {
 				int value = Integer.parseInt(attParts[1]);
 				String mask = CPabeTools.convertToTwoComplement(value);
 				for(int i = 0; i < 32; i++) {
-					ret.add(attribute + ":" + CPabeTools.replaceSignedBitString(mask, i));
+					ret.add(attribute + CPabeSettings.CPabeConstants.AVSPLIT + CPabeTools.replaceSignedBitString(mask, i));
 				}
 			}
 			// else keep it the same
@@ -380,7 +380,8 @@ public class CPabeTools {
 		return attributeValue.toString();
 	}
 
-	//Converts an 32bit integer to an n-bit binary signed string.
+	// Converts an 32bit integer to an n-bit binary signed String
+	// (i.e. in two complements format).
 	public static String convertToTwoComplement(int myNum){
 		if(myNum > 0) {
 			return String.format("%32s", Integer.toBinaryString(myNum)).replace(' ', '0');

@@ -1,19 +1,13 @@
 package name.raess.abe.cp.objects;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.CPabeTools;
 
 public class CPabePolicy {
-	
 	// this will be exported
 	// attribute k
 	public int k;
@@ -29,8 +23,8 @@ public class CPabePolicy {
      * it is 0 for leaves 
      * otherwise it is equal num */
 	public CPabePolicy[] children;
-	
-	// only used during encryption -> not exported or saved 
+	// this will not be exported
+	// and is used only during encryption 
 	// polynomial for this policy
 	public CPabePolynomial q;
 	// only used during encryption -> not exported or saved 
@@ -44,34 +38,46 @@ public class CPabePolicy {
 	public ArrayList<Integer> satisfiableList = new ArrayList<Integer>();
 	// only used during encryption -> not exported or saved 
 	// minimum leaves
-	public int minLeaves;
-	
-	// this is a threshhold gate
+	public int minLeaves;	
+	// default ctor
+	public CPabePolicy() {
+		
+	}	
+	// a (k, n)-threshhold gate ctor
+	// i.e.: 
+	// OR	->	(1, n) 
+	// XOF	->	(X, n)
 	public CPabePolicy(int k, int n) {
 		this.k = k;
 		this.hasValue = false;
 		this.attribute = null;
 		this.children = new CPabePolicy[n];
 	}
-	
-	// this is a threshhold gate
+	// a (k, k)-threshhold gate ctor
+	// i.e.: 
+	// AND	->	(k, k) 
 	public CPabePolicy(int k) {
 		this.k = k;
 		this.hasValue = false;
 		this.attribute = null;
 		this.children = new CPabePolicy[k];
 	}	
-	
-	// this is an policy attribute without a value
-	public CPabePolicy(String s) {
+	// this is an attribute without a value
+	public CPabePolicy(String attValue) {
 		this.k = 1;
 		this.hasValue = false;
-		this.attribute = s;
+		this.attribute = attValue;
 		this.children = null;
 	}
-	
-	// this is a policy tree with a value given as int
-	// For int, from -2147483648 to 2147483647 inclusive, 
+	// this is part of an attribute with a value
+	public CPabePolicy(String attValue, boolean b) {
+		this.k = 1;
+		this.hasValue = b;
+		this.attribute = attValue;
+		this.children = null;
+	}
+	// this is an attribute with a value given as int.
+	// For value, from -2147483648 to 2147483647 inclusive, 
 	// converted to bitmask with 32 bits -> i.e. 32 children
 	public CPabePolicy(String att, int value) {
 		this.k = 32;
@@ -80,8 +86,6 @@ public class CPabePolicy {
 		this.children = new CPabePolicy[32];
 		// this converts the int value in a string 
 		String binary = CPabeTools.convertToTwoComplement(value);
-		// counter for loop over binary string
-		int i = att.length() + 1;
 		// loop over bitMask beginning at 
 		// length of attribute name +1 (because of :)
 		// for 32 bits length
@@ -123,111 +127,134 @@ public class CPabePolicy {
 			 */
 			// create bitmask 
 			// i.e. A:********************************
-			String attValue = this.attStringBinMaskValue(att, i++, binary.charAt(j));
-			System.out.println("poly-attri: " + attValue);
-			CPabePolicy child = new CPabePolicy(attValue);
-			child.hasValue = true;
+			String attValue = this.attStringBinMaskValue(att, j, binary.charAt(j));
+			CPabePolicy child = new CPabePolicy(attValue, true);
 			// add to root node
 			this.children[j] = child;
 		}
 	}
-	
-	// this is a policy tree with a value given as int
-	// and a comparison given as LT (<) or GT (>)
-	// For attValues from -2147483648 to 2147483647 inclusive.
-	//
+	// this is an attribute with a value given as int.
+	// together with a comparison given as LT (<) or GT (>)
+	// resulting in a policy represeting that inequation
+	// For value from -2147483648 to 2147483647 inclusive.
 	public CPabePolicy(String att, int value, boolean isGreater) {
+		String complement = CPabeTools.convertToTwoComplement(value).substring(1);	
 		this.attribute = null;
 		this.hasValue = false;
-		// this converts the int value into a string 
-		String binaryTwoComplement = CPabeTools.convertToTwoComplement(value);
-		// fuer den ausblick
 		ArrayList<CPabePolicy> stack = new ArrayList<CPabePolicy>();
-		String binary = Integer.toBinaryString(Math.abs(value));
-		// if greater then zero and value is positive
-		// first bit has to be zero	
+		// GT >
 		if(isGreater) {
 			if(value >= 0) {
-				// (first bit zero) && ((1 of the intermediate bits one) || (greater than absolute remainder))
+				// ((first bit zero) && (greater than complement remainder))
+				// an and gate (i.e. 2 children and k=2)
 				this.k = 2;
-				this.children = new CPabePolicy[2];
-				this.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '0'));
-				this.children[1] = this.generatePolicy(att, binary, isGreater);
+				// this is: (first bit zero)
+				stack.add(new CPabePolicy(this.attStringBinMaskValue(att, 0, '0')));
+				stack.add(this.constructRemainderPolicy(att, complement, true));
 			}
 			else {
-				// (first bit zero) || ((first bit one) && (lesser than absolute remainder))
+				// (first bit zero) || ((first bit one) && (lesser than complement remainder))
+				this.k = 1;
+				// this is: (first bit zero)
+				stack.add(new CPabePolicy(this.attStringBinMaskValue(att, 0, '0')));
+				// an and gate
+				CPabePolicy and = new CPabePolicy(2);
+				and.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, 0, '1'));
+				and.children[1] = this.constructRemainderPolicy(att, complement, false);
+				stack.add(and);
 			}
 		}
+		// LT <
 		else {
 			if(value < 0) {
-				// (first bit one) && ((1 of the intermediate bits zero) || (greater than remainder))
+				// ((first bit one) && (greater than complement remainder))
 				this.k = 2;
-				this.children = new CPabePolicy[2];				
-				this.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '1'));
-				this.children[1] = this.generatePolicy(att, binary, isGreater);
+				// this is: (first bit one)
+				stack.add(new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '1')));
+				stack.add(this.constructRemainderPolicy(att, complement, true));
 			}
 			else {
-				// (first bit one) || ((first bit zero) && (lesser than absolute remainder))
+				// (first bit one) || ((first bit zero) && (lesser than complement remainder))
+				this.k = 1;
+				stack.add(new CPabePolicy(this.attStringBinMaskValue(att, att.length() + 1, '1')));
+				CPabePolicy and = new CPabePolicy(2);
+				and.children[0] = new CPabePolicy(this.attStringBinMaskValue(att, 0, '0'));
+				and.children[1] = this.constructRemainderPolicy(att, complement, false);
+				stack.add(and);				
 			}			
 		}
-		// otherwise we don't know the sign
-		
-		/*
-		// leading 0s
-		String binaryMask = String.format("%31s", binaryString).replace(' ', '0');
-		// set 0 values
-		for(int j = 0; j < gtc; j++) {
-				StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-				attributeValue.setCharAt(att.length() + 1 + j, binaryMask.charAt(j));
-				// create attribute child using this string
-				System.out.println(attributeValue.toString());
-				CPabePolicy child = new CPabePolicy(attributeValue.toString());
-				child.hasValue = true;
-				// add to root node
-				this.children[j] = child;
-			}
-			StringBuilder attributeValue = new StringBuilder(att + ":" + bitMask);
-			attributeValue.setCharAt(att.length() + 1 + gtc, '1');
-			// create attribute child using this string
-			System.out.println(attributeValue.toString());
-			CPabePolicy currentOnechild = new CPabePolicy(attributeValue.toString());
-			currentOnechild.hasValue = true;
-			// and add to root node
-			this.children[gtc] = currentOnechild;
-			// now add the rest of the binary string
-			CPabePolicy child = new CPabePolicy(att, Integer.parseInt(binaryString.substring(1)), operation);
-			child.hasValue = true;
-			// add to root node
-			this.children[gtc] = child;
-			*/
-		this.k = stack.size();
 		this.children = stack.toArray(new CPabePolicy[stack.size()]);
 	}
 
-	private CPabePolicy generatePolicy(String att, String binary, boolean isGreater) {
-		// TODO Auto-generated method stub
-		return null;
+	private CPabePolicy constructRemainderPolicy(String att, String complementValue, boolean isGreater) {
+		System.out.println(complementValue);
+		String attValue = null;
+		CPabePolicy root = null;
+		int len = complementValue.length();
+		// copy first bit
+		int firstBit = Integer.parseInt(complementValue.substring(0, 1));
+		// and  then remove it
+		complementValue = complementValue.substring(1);
+		if(len == 1) {
+			if(isGreater) {
+				attValue = this.attStringBinMaskValue(att, 32 - len, '1');
+				root = new CPabePolicy(attValue, true);
+			}
+			else {
+				attValue = this.attStringBinMaskValue(att, 32 - len, '0');
+				root = new CPabePolicy(attValue, true);
+			}
+		}
+		else {
+			if(isGreater) {
+				if(firstBit == 1) {
+					// AND
+					root = new CPabePolicy(2);
+					attValue = this.attStringBinMaskValue(att, 32 - len, '1');
+					root.children[0] = new CPabePolicy(attValue, true);
+					root.children[1] = this.constructRemainderPolicy(att, complementValue, isGreater);
+				}
+				else if(firstBit == 0) {
+					// OR
+					root  = new CPabePolicy(1, 2);
+					attValue = this.attStringBinMaskValue(att, 32 - len, '1');
+					root.children[0] = new CPabePolicy(attValue, true);
+					root.children[1] = this.constructRemainderPolicy(att, complementValue, isGreater);
+				}
+			}
+			else {
+				if(firstBit == 1) {
+					// OR
+					root  = new CPabePolicy(1, 2);
+					attValue = this.attStringBinMaskValue(att, 32 - len, '0');
+					root.children[0] = new CPabePolicy(attValue, true);
+					root.children[1] = this.constructRemainderPolicy(att, complementValue, isGreater);
+				}
+				else if(firstBit == 0) {
+					// AND
+					root = new CPabePolicy(2);
+					attValue = this.attStringBinMaskValue(att, 32 - len, '0');
+					root.children[0] = new CPabePolicy(attValue, true);
+					root.children[1] = this.constructRemainderPolicy(att, complementValue, isGreater);				
+				}
+			}
+		}
+		return root;
 	}
 
 	// create a attribute string with value as a string bit mask 
 	// covering everything but one single bit with *
 	// i.e.: A:*******************************1
 	public String attStringBinMaskValue(String att, int position, char value) {
-		StringBuilder attributeValue = new StringBuilder(att + ":" + String.join("", Collections.nCopies(32, "*")));
-		attributeValue.setCharAt(position, value);
+		StringBuilder attributeValue = new StringBuilder(att + CPabeSettings.CPabeConstants.AVSPLIT + String.join("", Collections.nCopies(32, "*")));
+		attributeValue.setCharAt(att.length() + CPabeSettings.CPabeConstants.AVSPLIT.length() + position, value);
 		return attributeValue.toString();
-	}
-	
-	// default ctor
-	public CPabePolicy() {
-		
 	}
 
 	// imports a byte[] policy
 	public CPabePolicy(byte[] b64decode) {
 		// TODO Auto-generated constructor stub
 	}
-
 	public String toString() {
 		return this.toDetail(false);
 	}
