@@ -1,4 +1,4 @@
-package name.raess.abe.cp.objects;
+package name.raess.abe.cp;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

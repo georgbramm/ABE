@@ -56,10 +56,8 @@ class Start {
 			String sJSONenc = "{\"and\":[{\"lt\":{\"att\":\"date\", \"val\":\"25\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
-			//System.out.println(ct.toString());
-			//System.out.println(ct.exportBase64());
-			//ct.importBase64(ct.exportBase64(), cp.getPublicParameters());
-			System.out.println(ct.policy.toString());
+			ct.importBase64(ct.exportBase64(), cp.getPublicParameters());
+			System.out.println(ct.policy.toJSON().toJSONString());
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));
 		} catch (IOException e) {
 			System.out.println("error parsing policy");

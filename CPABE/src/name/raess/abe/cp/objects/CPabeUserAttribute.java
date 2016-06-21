@@ -3,6 +3,7 @@ package name.raess.abe.cp.objects;
 import org.json.simple.JSONObject;
 
 import it.unisa.dia.gas.jpbc.Element;
+import name.raess.abe.cp.CPabeObjectTools;
 import name.raess.abe.cp.CPabeSettings;
 
 public class CPabeUserAttribute {

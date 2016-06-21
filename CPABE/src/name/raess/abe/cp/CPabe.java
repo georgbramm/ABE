@@ -247,7 +247,7 @@ public class CPabe {
 		
 		// and give it out to console if desired
 		if(CPabeSettings.consoleOutput) {
-			System.out.println(ct.policy.toDetail(true));
+			System.out.println(ct.policy.toStringDetail(true));
 		}
 		
 		// calculate policy tree secret ( Bethencourt Goyal Algorithm ) 

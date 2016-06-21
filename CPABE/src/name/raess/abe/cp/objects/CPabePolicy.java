@@ -1,9 +1,16 @@
 package name.raess.abe.cp.objects;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import it.unisa.dia.gas.jpbc.Element;
+import name.raess.abe.cp.CPabeObjectTools;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.CPabeTools;
 
@@ -16,8 +23,8 @@ public class CPabePolicy {
 	// true if leaf with value, otherwise false
 	public boolean hasValue;
 	// C and Cprime for every leaf attribute
-	public Element cy;
-	public Element cyPrime;
+	public Element cy;		// G1
+	public Element cyPrime;	// G1
 	/* array of children if this
 	 * is a threshold gate 
      * it is 0 for leaves 
@@ -75,6 +82,10 @@ public class CPabePolicy {
 		this.hasValue = b;
 		this.attribute = attValue;
 		this.children = null;
+	}
+	// constructs a CPabePolicy according to JSONObject
+	public CPabePolicy(JSONObject json, CPabePublicParameters pk) throws ParseException {
+		this.fromJSON(json, pk);
 	}
 	// this is an attribute with a value given as int.
 	// For value, from -2147483648 to 2147483647 inclusive, 
@@ -187,7 +198,6 @@ public class CPabePolicy {
 	}
 
 	private CPabePolicy constructRemainderPolicy(String att, String complementValue, boolean isGreater) {
-		System.out.println(complementValue);
 		String attValue = null;
 		CPabePolicy root = null;
 		int len = complementValue.length();
@@ -250,16 +260,65 @@ public class CPabePolicy {
 		attributeValue.setCharAt(att.length() + CPabeSettings.CPabeConstants.AVSPLIT.length() + position, value);
 		return attributeValue.toString();
 	}
-
-	// imports a byte[] policy
-	public CPabePolicy(byte[] b64decode) {
-		// TODO Auto-generated constructor stub
-	}
+	// return this policy as a JSON Object
 	public String toString() {
-		return this.toDetail(false);
+		return this.toStringDetail(false);
+	}
+	// return this policy as a String
+	@SuppressWarnings("unchecked")
+	public JSONObject toJSON() {
+		JSONObject obj = new JSONObject();
+		BigInteger biK = BigInteger.valueOf(this.k);
+		String encodedk = CPabeObjectTools.b64encode(biK.toByteArray());
+		obj.put("k", encodedk);
+		// this is a leaf
+		if(this.children == null) {
+			obj.put("isLeaf", "1");
+			obj.put("attribute", this.attribute);
+			obj.put("hasValue", this.hasValue ? "true" : "false" );
+			obj.put("cy", CPabeObjectTools.b64encode(this.cy.toBytes()));
+			obj.put("cyPrime", CPabeObjectTools.b64encode(this.cyPrime.toBytes()));			
+		}
+		// this is a threshold gate		
+		else {
+			obj.put("isLeaf", "0");
+			JSONArray children = new JSONArray();
+			for(CPabePolicy pol: this.children) {
+				children.add(pol.toJSON());
+			}
+			obj.put("children", children);
+		}
+		return obj;
+	}
+	
+	// construct this policy from a JSONObject
+	public void fromJSON(JSONObject jsonObj, CPabePublicParameters pk) throws ParseException {
+        byte[] encodedK = CPabeObjectTools.b64decode((String) jsonObj.get("k"));	         
+        this.k = new BigInteger(encodedK).intValue();
+        int isLeaf = Integer.parseInt((String) jsonObj.get("isLeaf"));
+        JSONParser parser = new JSONParser();
+        if(isLeaf == 1) {
+        	this.attribute = (String) jsonObj.get("attribute");
+        	this.hasValue = (String) jsonObj.get("hasValue") == "true" ? true : false;
+        	byte[] encodedcy = CPabeObjectTools.b64decode((String) jsonObj.get("cy"));
+        	this.cy = pk.p.getG1().newElement();
+	        this.cy.setFromBytes(encodedcy);
+        	byte[] encodedcyPrime = CPabeObjectTools.b64decode((String) jsonObj.get("cyPrime"));
+        	this.cyPrime = pk.p.getG1().newElement();
+	        this.cyPrime.setFromBytes(encodedcyPrime);
+	   }
+        else {
+        	ArrayList<CPabePolicy> childrenpolicy = new ArrayList<CPabePolicy>();
+        	JSONArray children = (JSONArray)jsonObj.get("children");
+        	for(int i = 0; i < children.size(); i++) {
+        		JSONObject jsonAttrObj = (JSONObject) children.get(i);
+        		childrenpolicy.add(new CPabePolicy(jsonAttrObj, pk));
+        	}
+        	this.children = childrenpolicy.toArray(new CPabePolicy[childrenpolicy.size()]);
+        }
 	}
 
-	public String toDetail(boolean showDetail) {
+	public String toStringDetail(boolean showDetail) {
 		String ret = "";
 		if(this.k == 1 && !this.hasValue) {
 			if(this.children != null) {
@@ -308,41 +367,4 @@ public class CPabePolicy {
 		}
 		return ret;
 	}
-	
-	public List<byte[]> toByteList() {
-		List<byte[]> list = new ArrayList<byte[]>();
-		byte[] hasValue = new byte[1];
-		if(this.hasValue) {
-			hasValue[0] = 1;
-		}
-		else {
-			hasValue[0] = 0;
-		}
-		list.add(Integer.toString(this.k).getBytes());
-		list.add(hasValue);
-		// this is a leaf
-		if(this.hasValue) {
-			list.add(this.attribute.getBytes());
-			list.add(this.cy.toBytes());
-			list.add(this.cyPrime.toBytes());
-		}
-		// this is a threshold gate
-		else {
-			for(int x = 0;x < this.children.length; x++) {
-				List<byte[]> child = this.children[x].toByteList();
-				list.addAll(child);
-			}
-		}
-		return list;
-	}
-/*
-	public byte[] getBytes() {
-		return this.toByteList().toString().getBytes();
-		byte[] byteArray = new byte[list.size()];
-		for (int index = 0; index < list.size(); index++) {
-			byte[] h = (byte[]) list.get(index);
-			byteArray[index] = h;
-		}
-		return byteArray;
-	}*/
 }

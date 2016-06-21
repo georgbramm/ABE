@@ -15,6 +15,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import it.unisa.dia.gas.jpbc.Element;
+import name.raess.abe.cp.CPabeObjectTools;
 import name.raess.abe.cp.CPabeSettings;
 
 /* This Class represents a User Key (SK)
@@ -89,7 +90,7 @@ public class CPabeUserKey {
 	@SuppressWarnings("unchecked")
 	public String exportBase64() throws UnsupportedEncodingException {
 		JSONObject obj = new JSONObject();
-		String encodedD = org.apache.commons.codec.binary.Base64.encodeBase64String(this.d.toBytes());
+		String encodedD = CPabeObjectTools.b64encode(this.d.toBytes());
 		obj.put("d", encodedD);
 		JSONArray attrs = new JSONArray();
 		for(CPabeUserAttribute attr: attributes) {
@@ -97,7 +98,7 @@ public class CPabeUserKey {
 		}
 		obj.put("attrs", attrs);
 		String json = obj.toJSONString();
-		String b64 = org.apache.commons.codec.binary.Base64.encodeBase64String(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
+		String b64 = CPabeObjectTools.b64encode(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
 		b64 = CPabeSettings.CPabeConstants.SKHEAD 
 				+ CPabeSettings.versionString 
 				+ b64 
@@ -111,12 +112,12 @@ public class CPabeUserKey {
 		// remove last line
 		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.SKTAIL));
 		b64 = b64.replace(CPabeSettings.CPabeConstants.NEWLINE, "");
-		byte[] data = org.apache.commons.codec.binary.Base64.decodeBase64(b64);
+		byte[] data = CPabeObjectTools.b64decode(b64);
 		JSONParser parser = new JSONParser();
 		try{
 	         Object obj = parser.parse(new String(data));
 	         JSONObject jsonObj = (JSONObject)obj;
-	         byte[] encodedD = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonObj.get("d"));	         
+	         byte[] encodedD = CPabeObjectTools.b64decode((String) jsonObj.get("d")); 
 	         this.d = pk.p.getG2().newElement();
 	         this.d.setFromBytes(encodedD);
 	         JSONArray attrs = (JSONArray)jsonObj.get("attrs");
@@ -125,8 +126,8 @@ public class CPabeUserKey {
 	        	 Object attrParser = parser.parse((String) attrs.get(i));
 	        	 JSONObject jsonAttrObj = (JSONObject)attrParser;
 	        	 String desc = (String) jsonAttrObj.get("desc");
-	        	 byte[] encodedDj = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonAttrObj.get("dj"));
-	        	 byte[] encodedDjPrime = org.apache.commons.codec.binary.Base64.decodeBase64((String) jsonAttrObj.get("djPrime"));
+	        	 byte[] encodedDj = CPabeObjectTools.b64decode((String) jsonAttrObj.get("dj"));
+	        	 byte[] encodedDjPrime = CPabeObjectTools.b64decode((String) jsonAttrObj.get("djPrime"));
 	        	 CPabeUserAttribute newAttribute = new CPabeUserAttribute(desc);
 	        	 newAttribute.dj = pk.p.getG2().newElement();
 	        	 newAttribute.dj.setFromBytes(encodedDj);

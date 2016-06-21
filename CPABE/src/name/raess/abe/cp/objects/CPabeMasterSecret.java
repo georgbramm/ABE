@@ -15,6 +15,7 @@ import org.json.simple.parser.ParseException;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import name.raess.abe.cp.CPabeObjectTools;
 import name.raess.abe.cp.CPabeSettings;
 
 /* This Class represents a Master Secret Key (MSK)
