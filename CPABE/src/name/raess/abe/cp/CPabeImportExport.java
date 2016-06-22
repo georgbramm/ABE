@@ -8,7 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-public class CPabeObjectTools {
+public class CPabeImportExport {
 	// this converts an Object into byte[]
 	public static byte[] convertToBytes(Object object) throws IOException {
 	    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();

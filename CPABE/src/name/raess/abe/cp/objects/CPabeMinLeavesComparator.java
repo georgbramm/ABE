@@ -3,15 +3,11 @@ package name.raess.abe.cp.objects;
 
 import java.util.Comparator;
 
-public class CPabeComp implements Comparator<Integer> {
-
+public class CPabeMinLeavesComparator implements Comparator<Integer> {
 	CPabePolicy policy;
-	
-	public CPabeComp(CPabePolicy p) {
+	public CPabeMinLeavesComparator(CPabePolicy p) {
 		this.policy = p;
 	}
-
-	@Override
 	public int compare(Integer x, Integer y) {
 		int a = policy.children[x.intValue()].minLeaves;
 		int b = policy.children[y.intValue()].minLeaves;

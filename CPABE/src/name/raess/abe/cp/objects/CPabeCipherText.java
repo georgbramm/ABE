@@ -11,7 +11,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import it.unisa.dia.gas.jpbc.Element;
-import name.raess.abe.cp.CPabeObjectTools;
+import name.raess.abe.cp.CPabeImportExport;
 import name.raess.abe.cp.CPabeSettings;
 
 public class CPabeCipherText {
@@ -42,7 +42,7 @@ public class CPabeCipherText {
 			this.policy = new CPabePolicy(jsonPolicy, pk);
 		}		
 	}
-
+	// return as json string representation
 	@SuppressWarnings("unchecked")
 	public String toString() {
 		JSONObject obj = new JSONObject();
@@ -53,7 +53,7 @@ public class CPabeCipherText {
 		obj.put("policy", this.policy.toString());
 		return obj.toJSONString();
 	}
-	
+	// save in a binary file
 	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.c.toBytes());
@@ -65,38 +65,39 @@ public class CPabeCipherText {
 	    out.writeObject(list);
 	    out.close();
 	}
-	
+	// return as base64 encoded json string
 	@SuppressWarnings("unchecked")
 	public String exportBase64() {
 		JSONObject obj = new JSONObject();
-		obj.put("c", CPabeObjectTools.b64encode(this.c.toBytes()));
-		obj.put("cPrime", CPabeObjectTools.b64encode(this.cPrime.toBytes()));
-		obj.put("ct", CPabeObjectTools.b64encode(this.cipherText.getBytes()));
-		obj.put("iv", CPabeObjectTools.b64encode(this.iv.getBytes()));
+		obj.put("c", CPabeImportExport.b64encode(this.c.toBytes()));
+		obj.put("cPrime", CPabeImportExport.b64encode(this.cPrime.toBytes()));
+		obj.put("ct", CPabeImportExport.b64encode(this.cipherText.getBytes()));
+		obj.put("iv", CPabeImportExport.b64encode(this.iv.getBytes()));
 		obj.put("policy", this.policy.toJSON().toJSONString());
-		return CPabeSettings.CPabeConstants.CTHEAD 
+		return CPabeSettings.CPabeConstants.HEAD.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.CT) 
 				+ CPabeSettings.versionString 
-				+ CPabeObjectTools.b64encode(obj.toJSONString().getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n") 
-				+ CPabeSettings.CPabeConstants.CTTAIL;
+				+ CPabeImportExport.b64encode(obj.toJSONString().getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n") 
+				+ CPabeSettings.CPabeConstants.TAIL.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.CT);
 	}
-	
+	// import from a base64 encoded json string
+	// using CPabePublicParameters
 	public boolean importBase64(String b64, CPabePublicParameters pk) {
 		// remove first two lines
 		b64 = b64.substring(b64.indexOf(CPabeSettings.versionString) + CPabeSettings.versionString.length());
 		// remove last line
-		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.CTTAIL));
+		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.TAIL.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.CT)));
 		// remove new lines
 		b64 = b64.replace(CPabeSettings.CPabeConstants.NEWLINE, "");
 		JSONParser parser = new JSONParser();
 		try{
-			Object obj = parser.parse(new String(CPabeObjectTools.b64decode(b64)));
+			Object obj = parser.parse(new String(CPabeImportExport.b64decode(b64)));
 			JSONObject jsonObj = (JSONObject)obj;
 			this.c = pk.p.getG1().newElement();
-			this.c.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("c")));
+			this.c.setFromBytes(CPabeImportExport.b64decode((String) jsonObj.get("c")));
 			this.cPrime = pk.p.getGT().newElement();
-			this.cPrime.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("cPrime")));
-			this.cipherText = new String(CPabeObjectTools.b64decode((String) jsonObj.get("ct")));
-			this.iv = new String(CPabeObjectTools.b64decode((String) jsonObj.get("iv")));
+			this.cPrime.setFromBytes(CPabeImportExport.b64decode((String) jsonObj.get("cPrime")));
+			this.cipherText = new String(CPabeImportExport.b64decode((String) jsonObj.get("ct")));
+			this.iv = new String(CPabeImportExport.b64decode((String) jsonObj.get("iv")));
 			Object objPolicy = parser.parse((String) jsonObj.get("policy"));
 			this.policy = new CPabePolicy((JSONObject) objPolicy, pk);
 			return true;

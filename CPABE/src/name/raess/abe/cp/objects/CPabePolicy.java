@@ -3,14 +3,11 @@ package name.raess.abe.cp.objects;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 import it.unisa.dia.gas.jpbc.Element;
-import name.raess.abe.cp.CPabeObjectTools;
+import name.raess.abe.cp.CPabeImportExport;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.CPabeTools;
 
@@ -30,25 +27,20 @@ public class CPabePolicy {
      * it is 0 for leaves 
      * otherwise it is equal num */
 	public CPabePolicy[] children;
-	// this will not be exported
-	// and is used only during encryption 
+	// this will not be exported and is used only during encryption
 	// polynomial for this policy
 	public CPabePolynomial q;
-	// only used during encryption -> not exported or saved 
+	// this will not be exported and is used only during decryption 
 	// is this policy satisfiable
 	public boolean satisfiable;
-	// only used during encryption -> not exported or saved 
-	// index in parrent children arraylist 
-	public int index;
-	// only used during encryption -> not exported or saved 
+	// position of corresponding attribute in list of attributes in user key {sk}  
+	public int index; 
 	// satisfiable List
-	public ArrayList<Integer> satisfiableList = new ArrayList<Integer>();
-	// only used during encryption -> not exported or saved 
+	public ArrayList<Integer> satisfiableList = new ArrayList<Integer>(); 
 	// minimum leaves
 	public int minLeaves;	
 	// default ctor
 	public CPabePolicy() {
-		
 	}	
 	// a (k, n)-threshhold gate ctor
 	// i.e.: 
@@ -256,8 +248,8 @@ public class CPabePolicy {
 	// covering everything but one single bit with *
 	// i.e.: A:*******************************1
 	public String attStringBinMaskValue(String att, int position, char value) {
-		StringBuilder attributeValue = new StringBuilder(att + CPabeSettings.CPabeConstants.AVSPLIT + String.join("", Collections.nCopies(32, "*")));
-		attributeValue.setCharAt(att.length() + CPabeSettings.CPabeConstants.AVSPLIT.length() + position, value);
+		StringBuilder attributeValue = new StringBuilder(att + CPabeSettings.CPabeConstants.SIGN + String.join("", Collections.nCopies(32, "*")));
+		attributeValue.setCharAt(att.length() + CPabeSettings.CPabeConstants.SIGN.length() + position, value);
 		return attributeValue.toString();
 	}
 	// return this policy as a JSON Object
@@ -269,15 +261,15 @@ public class CPabePolicy {
 	public JSONObject toJSON() {
 		JSONObject obj = new JSONObject();
 		BigInteger biK = BigInteger.valueOf(this.k);
-		String encodedk = CPabeObjectTools.b64encode(biK.toByteArray());
+		String encodedk = CPabeImportExport.b64encode(biK.toByteArray());
 		obj.put("k", encodedk);
 		// this is a leaf
 		if(this.children == null) {
 			obj.put("isLeaf", "1");
 			obj.put("attribute", this.attribute);
 			obj.put("hasValue", this.hasValue ? "true" : "false" );
-			obj.put("cy", CPabeObjectTools.b64encode(this.cy.toBytes()));
-			obj.put("cyPrime", CPabeObjectTools.b64encode(this.cyPrime.toBytes()));			
+			obj.put("cy", CPabeImportExport.b64encode(this.cy.toBytes()));
+			obj.put("cyPrime", CPabeImportExport.b64encode(this.cyPrime.toBytes()));			
 		}
 		// this is a threshold gate		
 		else {
@@ -293,16 +285,16 @@ public class CPabePolicy {
 	
 	// construct this policy from a JSONObject representing a policy
 	public void fromJSON(JSONObject jsonObj, CPabePublicParameters pk) throws ParseException {
-        byte[] encodedK = CPabeObjectTools.b64decode((String) jsonObj.get("k"));	         
+        byte[] encodedK = CPabeImportExport.b64decode((String) jsonObj.get("k"));	         
         this.k = new BigInteger(encodedK).intValue();
         int isLeaf = Integer.parseInt((String) jsonObj.get("isLeaf"));
         if(isLeaf == 1) {
         	this.attribute = (String) jsonObj.get("attribute");
         	this.hasValue = (String) jsonObj.get("hasValue") == "true" ? true : false;
-        	byte[] encodedcy = CPabeObjectTools.b64decode((String) jsonObj.get("cy"));
+        	byte[] encodedcy = CPabeImportExport.b64decode((String) jsonObj.get("cy"));
         	this.cy = pk.p.getG1().newElement();
 	        this.cy.setFromBytes(encodedcy);
-        	byte[] encodedcyPrime = CPabeObjectTools.b64decode((String) jsonObj.get("cyPrime"));
+        	byte[] encodedcyPrime = CPabeImportExport.b64decode((String) jsonObj.get("cyPrime"));
         	this.cyPrime = pk.p.getG1().newElement();
 	        this.cyPrime.setFromBytes(encodedcyPrime);
 	   }

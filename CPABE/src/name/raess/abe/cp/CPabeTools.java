@@ -26,7 +26,7 @@ import org.json.simple.JSONObject;
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
 import name.raess.abe.cp.objects.CPabeCipherText;
-import name.raess.abe.cp.objects.CPabeComp;
+import name.raess.abe.cp.objects.CPabeMinLeavesComparator;
 import name.raess.abe.cp.objects.CPabePolicy;
 import name.raess.abe.cp.objects.CPabePolynomial;
 import name.raess.abe.cp.objects.CPabePublicParameters;
@@ -35,7 +35,9 @@ import name.raess.abe.cp.objects.CPabeUserKey;
 
 public class CPabeTools {
 
-
+	// encrypt data using keyElement from CP-ABE scheme
+	// with AES/CBC/PKCS5Padding
+	// @return ciphertext and iv as String[]
 	public static String[] symEncrypt(Element keyElement, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
 		// Derive the key
         SecretKeySpec secret = CPabeTools.deriveKey(keyElement);
@@ -45,11 +47,24 @@ public class CPabeTools {
         AlgorithmParameters params = cipher.getParameters();
         byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
         String[] ret = new String[2];
-        ret[0] = CPabeObjectTools.b64encode(cipher.doFinal(data));
-        ret[1] = CPabeObjectTools.b64encode(iv);
+        ret[0] = CPabeImportExport.b64encode(cipher.doFinal(data));
+        ret[1] = CPabeImportExport.b64encode(iv);
         return ret;
     }
-	
+	// decrypt aes ciphertext/iv from {ct} using keyElement as key
+	// @return decrypted data
+    public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
+    	byte[] cipherText = CPabeImportExport.b64decode(ct.cipherText);
+    	byte[] iv = CPabeImportExport.b64decode(ct.iv);
+        // Derive the key
+        SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
+        // Decrypt the message
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
+        return cipher.doFinal(cipherText);
+    }	
+	// derive a SecretKeySpec from an Element
+	// @return ciphertext and iv as String[]	
 	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
         // convert element to bytes
         byte[] key = keyElement.toBytes();
@@ -57,40 +72,20 @@ public class CPabeTools {
         MessageDigest sha = MessageDigest.getInstance("SHA-256");
         // and use element byte value
         key = sha.digest(key);
-        key = Arrays.copyOf(key, 16); // use only 128 bit because of java restrictions =(
+        key = Arrays.copyOf(key, 16); // use only 128 bit because of stupid java restrictions =(
         SecretKeySpec secret = new SecretKeySpec(key, "AES");
         return secret;
 	}
-
-    public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
-    	byte[] cipherText = CPabeObjectTools.b64decode(ct.cipherText);
-    	byte[] iv = CPabeObjectTools.b64decode(ct.iv);
-        // Derive the key
-        SecretKeySpec secret = CPabeTools.deriveKey(keyElement); 
-        // Decrypt the message
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
-        byte[] decryptedTextBytes = null;
-        try {
-            decryptedTextBytes = cipher.doFinal(cipherText);
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        }
-        return decryptedTextBytes;
-    }
-
-	public static void randomOracle(Element h, String attribute) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-1");
-			byte[] digest = md.digest(attribute.getBytes());
-			h.setFromHash(digest, 0, digest.length);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
+	// a random oracle
+	// set h to a random point
+	// depending on a SHA-1 hash from attribute
+	public static void randomOracle(Element h, String attribute) throws NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("SHA-1");
+		byte[] digest = md.digest(attribute.getBytes());
+		h.setFromHash(digest, 0, digest.length);
 	}
-    
+    // translate a policy given as JSONObject
+	// into active CPabePolicy objects
 	public static CPabePolicy parsePolicy(JSONObject policy) throws IOException {
 		String att = null;
 		int attValue = 0;
@@ -239,7 +234,7 @@ public class CPabeTools {
 		p.satisfiable = false;
 		if (p.children == null || p.children.length == 0) {
 			for (i = 0; i < prv.attributes.size(); i++) {
-				prvAttr = prv.attributes.get(i).description;
+				prvAttr = prv.attributes.get(i).attribute;
 				if (p != null && prvAttr.compareTo(p.attribute) == 0) {
 					p.satisfiable = true;
 					p.index = i;
@@ -299,19 +294,18 @@ public class CPabeTools {
 		return pub.p.getGT().newElement().setToOne().mul(s);
 	}
 
-	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> s, int i) {
+	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> ci, int i) {
 		int j, k;
 		Element t;
 		Element r = pk.p.getZr().newElement();
 		t = r.duplicate();
 		r.setToOne();
-		for (k = 0; k < s.size(); k++) {
-			j = s.get(k).intValue();
+		for (k = 0; k < ci.size(); k++) {
+			j = ci.get(k).intValue();
 			if (j != i) {
 				t.set(-j);
 				r.mul(t);
-				t.set(i - j);
-				t.invert();
+				t.set(i-j).invert();
 				r.mul(t);
 			}
 		}
@@ -319,32 +313,30 @@ public class CPabeTools {
 	}
 
 	public static void calculateMinLeaves(CPabePolicy p, CPabeUserKey prv) {
-		int k, l;
-		ArrayList<Integer> c = new ArrayList<Integer>();
-
 		// if this is an attribute
 		if (p.children == null || p.children.length == 0) {
 			p.minLeaves = 1;
 		}
+		// if this is a threshold gate
 		else {
-			// if this is a threshold gate
+			ArrayList<Integer> c = new ArrayList<Integer>();
 			for (int i = 0; i < p.children.length; i++) {
 				if (p.children[i].satisfiable) {
 					CPabeTools.calculateMinLeaves(p.children[i], prv);
 				}
-				c.add(new Integer(i));
+				c.add(i);
 			}
-			Collections.sort(c, new CPabeComp(p));
+			Collections.sort(c, new CPabeMinLeavesComparator(p));
 			p.satisfiableList = new ArrayList<Integer>();
 			p.minLeaves = 0;
-			l = 0;
-			for (int i = 0; i < p.children.length && l < p.k; i++) {
-				int cI = c.get(i).intValue(); /* c[i] */
+			int j = 0;
+			// satisfiable when all children are satisfied or k is satisfied
+			for (int i = 0; i < p.children.length && j < p.k; i++) {
+				int cI = c.get(i).intValue();
 				if (p.children[cI].satisfiable) {
-					l++;
 					p.minLeaves += p.children[cI].minLeaves;
-					k = cI + 1;
-					p.satisfiableList.add(new Integer(k));
+					p.satisfiableList.add(cI + 1);
+					j++;
 				}
 			}
 		}
@@ -360,7 +352,7 @@ public class CPabeTools {
 				int value = Integer.parseInt(attParts[1]);
 				String mask = CPabeTools.convertToTwoComplement(value);
 				for(int i = 0; i < 32; i++) {
-					ret.add(attribute + CPabeSettings.CPabeConstants.AVSPLIT + CPabeTools.replaceSignedBitString(mask, i));
+					ret.add(attribute + CPabeSettings.CPabeConstants.SIGN + CPabeTools.replaceSignedBitString(mask, i));
 				}
 			}
 			// else keep it the same
@@ -388,5 +380,20 @@ public class CPabeTools {
 		else {
 			return String.format("%32s", Integer.toBinaryString(myNum)).replace(' ', '1');
 		}
+	}
+	// Converts an String in two complements format
+	// back to the original int value
+	public static int convertFromTwoComplement(String myNum){
+		return (short) Integer.parseInt(myNum, 2);
+	}
+	// Converts multiple attribute values given
+	// as two complement when combined
+	// back to the original int value
+	public static int attValue(ArrayList<String> attList) {
+		StringBuilder attributeValue = new StringBuilder("********************************");
+		for(int j = 0; j < 32; j++) {
+			attributeValue.setCharAt(j, attList.get(j).charAt(j));
+		}
+		return CPabeTools.convertFromTwoComplement(attributeValue.toString());
 	}
 }

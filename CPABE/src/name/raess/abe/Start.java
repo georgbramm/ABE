@@ -49,14 +49,15 @@ class Start {
         
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
-		//georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
-        //CPabeUserKey georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
+		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
+        georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 			String sJSONenc = "{\"and\":[{\"lt\":{\"att\":\"date\", \"val\":\"25\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			ct.importBase64(ct.exportBase64(), cp.getPublicParameters());
+			System.out.println(georgsKey.exportBase64());
 			ct.saveAs(CPabeSettings.CPabeKeyCT);
 			ct = null;
 			ct = new CPabeCipherText(CPabeSettings.CPabeKeyCT, cp.getPublicParameters());

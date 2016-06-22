@@ -16,6 +16,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import org.json.simple.JSONObject;
 
@@ -156,7 +158,7 @@ public class CPabe {
 			hashedAttribute.powZn(rj);
 			// a new user attribute
 			CPabeUserAttribute att = new CPabeUserAttribute();
-			att.description = convertedAttributes[i];
+			att.attribute = convertedAttributes[i];
 			System.out.println("user-attri: " + convertedAttributes[i]);
 			// calc & set Dj part
 			att.dj = pk.p.getG2().newElement();
@@ -225,7 +227,7 @@ public class CPabe {
 	 *  @param ct a CPabeCipherText object
 	 *  @return the decrypted
 	 */		
-	public static byte[] decrypt(CPabePublicParameters pk, CPabeUserKey sk, CPabeCipherText ct) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException {
+	public static byte[] decrypt(CPabePublicParameters pk, CPabeUserKey sk, CPabeCipherText ct) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
 		// random m to recover from {ct}->C Prime
 		Element m = pk.p.getGT().newElement();
 		m = ct.cPrime.duplicate();

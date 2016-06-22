@@ -15,7 +15,7 @@ import org.json.simple.parser.ParseException;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
-import name.raess.abe.cp.CPabeObjectTools;
+import name.raess.abe.cp.CPabeImportExport;
 import name.raess.abe.cp.CPabeSettings;
 
 /* This Class represents a Master Secret Key (MSK)
@@ -64,14 +64,14 @@ public class CPabeMasterSecret {
 	@SuppressWarnings("unchecked")
 	public String exportBase64() {
 		JSONObject obj = new JSONObject();
-		obj.put("beta", CPabeObjectTools.b64encode(this.beta.toBytes()));
-		obj.put("gAlpha", CPabeObjectTools.b64encode(this.gAlpha.toBytes()));
+		obj.put("beta", CPabeImportExport.b64encode(this.beta.toBytes()));
+		obj.put("gAlpha", CPabeImportExport.b64encode(this.gAlpha.toBytes()));
 		String json = obj.toJSONString();
-		String b64 = CPabeObjectTools.b64encode(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
-		b64 = CPabeSettings.CPabeConstants.MSKHEAD 
+		String b64 = CPabeImportExport.b64encode(json.getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n");
+		b64 = CPabeSettings.CPabeConstants.HEAD.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.MSK) 
 				+ CPabeSettings.versionString 
 				+ b64 
-				+ CPabeSettings.CPabeConstants.MSKTAIL;
+				+ CPabeSettings.CPabeConstants.TAIL.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.MSK);
 		return b64;
 	}
 
@@ -79,17 +79,17 @@ public class CPabeMasterSecret {
 		// remove first two lines
 		b64 = b64.substring(b64.indexOf(CPabeSettings.versionString) + CPabeSettings.versionString.length());
 		// remove last line
-		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.MSKTAIL));
+		b64 = b64.substring(0, b64.lastIndexOf(CPabeSettings.CPabeConstants.TAIL.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.MSK)));
 		// remove new lines
 		b64 = b64.replace(CPabeSettings.CPabeConstants.NEWLINE, "");
 		JSONParser parser = new JSONParser();
 		try{
-			Object obj = parser.parse(new String(CPabeObjectTools.b64decode(b64)));
+			Object obj = parser.parse(new String(CPabeImportExport.b64decode(b64)));
 			JSONObject jsonObj = (JSONObject)obj;
 			this.beta = pk.p.getZr().newElement();
-			this.beta.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("beta")));
+			this.beta.setFromBytes(CPabeImportExport.b64decode((String) jsonObj.get("beta")));
 			this.gAlpha = pk.p.getG2().newElement();
-			this.gAlpha.setFromBytes(CPabeObjectTools.b64decode((String) jsonObj.get("gAlpha")));
+			this.gAlpha.setFromBytes(CPabeImportExport.b64decode((String) jsonObj.get("gAlpha")));
 			return true;
 		}catch(ParseException pe){
 			System.out.println("position: " + pe.getPosition());
