@@ -384,7 +384,23 @@ public class CPabeTools {
 	// Converts an String in two complements format
 	// back to the original int value
 	public static int convertFromTwoComplement(String myNum){
-		return (short) Integer.parseInt(myNum, 2);
+		// negative number
+		if(myNum.substring(0, 1) == "1") {
+			StringBuilder onesCompl = new StringBuilder();
+			for(char bit : myNum.toCharArray()) {
+			    // if '0', append a 1. if '1', append a 0.
+				onesCompl.append((bit == '0') ? 1 : 0);
+			}
+			String onesComplement = onesCompl.toString();
+			int converted = Integer.valueOf(onesComplement, 2);
+			// two's complement = one's complement + 1. 
+			// this is the positive value of the original string, so make it negative again.
+			return -(converted + 1);			
+		}
+		// positive number
+		else {
+			return Integer.parseInt(myNum, 2);
+		}
 	}
 	// Converts multiple attribute values given
 	// as two complement when combined
