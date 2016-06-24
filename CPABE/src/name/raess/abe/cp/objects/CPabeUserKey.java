@@ -64,16 +64,6 @@ public class CPabeUserKey {
 		return obj.toJSONString();
 	}
 	
-	public CPabeUserAttribute getAttribute(String a) {
-		CPabeUserAttribute ret = null;
-		for(CPabeUserAttribute attr: this.attributes) {
-			if(attr.attribute.equals(a)) {
-				ret = attr;
-			}
-		}
-		return ret;
-	}
-
 	public void saveAs(String saveas) throws IOException {
 		List<byte[]> list = new ArrayList<byte[]>();
 		list.add(this.d.toBytes());
@@ -104,11 +94,11 @@ public class CPabeUserKey {
 				attValue.add(attParts[1]);
 				// when our list of att's is full
 				if(attValue.size() == 32) {
-					infoLine += "attribute: " + att + " = " + CPabeTools.attValue(attValue) + CPabeSettings.CPabeConstants.NEWLINE;
+					infoLine += "attr: " + att + " = " + CPabeTools.attValue(attValue) + CPabeSettings.CPabeConstants.NEWLINE;
 				}
 			}
 			else {
-				infoLine += "attribute: " + attr.attribute + CPabeSettings.CPabeConstants.NEWLINE;
+				infoLine += "attr: " + attr.attribute + CPabeSettings.CPabeConstants.NEWLINE;
 			}
 		}
 		infoLine = infoLine.substring(0, infoLine.length() - 1);

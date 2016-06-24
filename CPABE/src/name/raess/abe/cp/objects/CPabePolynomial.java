@@ -17,7 +17,7 @@ public class CPabePolynomial {
 			this.coef[i].setToRandom();
 		}
 	}
-	
+
 	public Element evalPoly(Element x) {
 		Element r = this.coef[0].duplicate();
 		Element s = r.duplicate();

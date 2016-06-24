@@ -27,6 +27,8 @@ public class CPabePolicy {
      * it is 0 for leaves 
      * otherwise it is equal num */
 	public CPabePolicy[] children;
+	// polynomial if this is a negated attribute
+	public CPabePolynomial neg;
 	// this will not be exported and is used only during encryption
 	// polynomial for this policy
 	public CPabePolynomial q;
@@ -51,6 +53,7 @@ public class CPabePolicy {
 		this.hasValue = false;
 		this.attribute = null;
 		this.children = new CPabePolicy[n];
+		this.neg = null;
 	}
 	// a (k, k)-threshhold gate ctor
 	// i.e.: 
@@ -60,6 +63,7 @@ public class CPabePolicy {
 		this.hasValue = false;
 		this.attribute = null;
 		this.children = new CPabePolicy[k];
+		this.neg = null;
 	}	
 	// this is an attribute without a value
 	public CPabePolicy(String attValue) {
@@ -67,6 +71,7 @@ public class CPabePolicy {
 		this.hasValue = false;
 		this.attribute = attValue;
 		this.children = null;
+		this.neg = null;
 	}
 	// this is part of an attribute with a value
 	public CPabePolicy(String attValue, boolean b) {
@@ -188,7 +193,7 @@ public class CPabePolicy {
 		}
 		this.children = stack.toArray(new CPabePolicy[stack.size()]);
 	}
-
+	
 	private CPabePolicy constructRemainderPolicy(String att, String complementValue, boolean isGreater) {
 		String attValue = null;
 		CPabePolicy root = null;
@@ -210,7 +215,7 @@ public class CPabePolicy {
 		else {
 			if(isGreater) {
 				if(firstBit == 1) {
-					// AND
+					// AND	
 					root = new CPabePolicy(2);
 					attValue = this.attStringBinMaskValue(att, 32 - len, '1');
 					root.children[0] = new CPabePolicy(attValue, true);

@@ -9,16 +9,14 @@ public class CPabeMinLeavesComparator implements Comparator<Integer> {
 		this.policy = p;
 	}
 	public int compare(Integer x, Integer y) {
-		int a = policy.children[x.intValue()].minLeaves;
-		int b = policy.children[y.intValue()].minLeaves;
-		if(a < b) {
-			return -1;
+		if(this.policy.children[x.intValue()].minLeaves > this.policy.children[y.intValue()].minLeaves) {
+			return 1;
 		}
-		else if(a == b) {
+		else if(this.policy.children[x.intValue()].minLeaves == this.policy.children[y.intValue()].minLeaves) {
 			return 0;
 		}	
 		else {
-			return 1;
+			return -1;
 		}
 	}
 

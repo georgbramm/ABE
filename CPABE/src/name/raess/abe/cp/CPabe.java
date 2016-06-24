@@ -205,12 +205,12 @@ public class CPabe {
 		ct.c = pk.h.duplicate();
 		ct.c.powZn(s);
 		// generate new policy tree 
-		ct.policy = CPabeTools.parsePolicy(jsonPolicy);
+		ct.policy = CPabeTools.parsePolicy(jsonPolicy, pk);
 		// and give it out to console if desired
 		if(CPabeSettings.consoleOutput) {
 			System.out.println(ct.policy.toStringDetail(true));
 		}
-		// calculate policy tree secret ( Bethencourt Goyal Algorithm ) 
+		// calculate  Bethencourt Goyal algorithm over policy tree 
 		CPabeTools.bethencourtGoyal(ct.policy, pk, s);
 		// encrypt byte message using random m
 		String[] aes = CPabeTools.symEncrypt(m, message);

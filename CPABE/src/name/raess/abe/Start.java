@@ -53,7 +53,7 @@ class Start {
         georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
-			String sJSONenc = "{\"and\":[{\"lt\":{\"att\":\"date\", \"val\":\"25\"}},{\"att\":\"georg\"}]}";
+			String sJSONenc = "{\"and\":[{\"gt\":{\"att\":\"date\", \"val\":\"-25\"}},{\"att\":\"georg\"}]}";
 			JSONObject jsonEnc = (JSONObject) new JSONParser().parse(sJSONenc);
 			CPabeCipherText ct = cp.encrypt(cp.getPublicParameters(), "hi there".getBytes(), jsonEnc);
 			ct.importBase64(ct.exportBase64(), cp.getPublicParameters());

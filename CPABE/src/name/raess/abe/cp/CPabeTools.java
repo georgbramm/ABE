@@ -80,13 +80,13 @@ public class CPabeTools {
 	// set h to a random point
 	// depending on a SHA-1 hash from attribute
 	public static void randomOracle(Element h, String attribute) throws NoSuchAlgorithmException {
-		MessageDigest md = MessageDigest.getInstance("SHA-1");
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		byte[] digest = md.digest(attribute.getBytes());
 		h.setFromHash(digest, 0, digest.length);
 	}
     // translate a policy given as JSONObject
 	// into active CPabePolicy objects
-	public static CPabePolicy parsePolicy(JSONObject policy) throws IOException {
+	public static CPabePolicy parsePolicy(JSONObject policy, CPabePublicParameters pk) throws IOException {
 		String att = null;
 		int attValue = 0;
 		JSONArray nodeArray;
@@ -101,7 +101,7 @@ public class CPabeTools {
 	        	root = new CPabePolicy(1);
 	        	nodeArray = (JSONArray) policy.get(key);
 	        	for (Object currentNode : nodeArray) {
-	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
+	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode, pk);
 	        		stack.add(node);
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
@@ -110,7 +110,7 @@ public class CPabeTools {
 	        	nodeArray = (JSONArray) policy.get(key);
 	        	root = new CPabePolicy(nodeArray.size());
 	        	for (Object currentNode : nodeArray) {
-	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
+	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode, pk);
 	        		stack.add(node);
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
@@ -124,7 +124,7 @@ public class CPabeTools {
 	        	}
 	        	root = new CPabePolicy(K);
 	        	for (Object currentNode : nodeArray) {
-	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode);
+	        		CPabePolicy node = CPabeTools.parsePolicy((JSONObject) currentNode, pk);
 	        		stack.add(node);
 	        	}
 	        	root.children = stack.toArray(new CPabePolicy[stack.size()]);
@@ -132,14 +132,14 @@ public class CPabeTools {
 	        case CPabeSettings.CPabeConstants.ATT:
 	        	att = (String) policy.get(key);
 	        	root = new CPabePolicy(att);
-	        	break;
+	        	break;	        	
 	        case CPabeSettings.CPabeConstants.VAL:
 	        	attValue = Integer.parseInt((String) policy.get(key));
 	        	root = new CPabePolicy(att, attValue); // 32 bit value needs 32 children =(
 	        	break;  
 	        case CPabeSettings.CPabeConstants.EQ:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parsePolicy(nodeObject);
+	        	root = CPabeTools.parsePolicy(nodeObject, pk);
 	        	break;
 	        case CPabeSettings.CPabeConstants.LT:
 	        	nodeObject = (JSONObject) policy.get(key);
@@ -215,7 +215,7 @@ public class CPabeTools {
 			p.cyPrime = pub.p.getG2().newElement();
 			// set h to random oracle of attribute
 			CPabeTools.randomOracle(h, p.attribute);
-			p.cy = pub.g.duplicate();;
+			p.cy = pub.g.duplicate();
 			p.cy.powZn(p.q.coef[0]); 	
 			p.cyPrime = h.duplicate();
 			p.cyPrime.powZn(p.q.coef[0]);
@@ -294,14 +294,14 @@ public class CPabeTools {
 		return pub.p.getGT().newElement().setToOne().mul(s);
 	}
 
-	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> ci, int i) {
+	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> integerList, int i) {
 		int j, k;
 		Element t;
 		Element r = pk.p.getZr().newElement();
 		t = r.duplicate();
 		r.setToOne();
-		for (k = 0; k < ci.size(); k++) {
-			j = ci.get(k).intValue();
+		for (k = 0; k < integerList.size(); k++) {
+			j = integerList.get(k).intValue();
 			if (j != i) {
 				t.set(-j);
 				r.mul(t);
@@ -406,10 +406,12 @@ public class CPabeTools {
 	// as two complement when combined
 	// back to the original int value
 	public static int attValue(ArrayList<String> attList) {
-		StringBuilder attributeValue = new StringBuilder("********************************");
+		// first combine all 32 attributes into one string
+		StringBuilder attributeValue = new StringBuilder(String.join("", Collections.nCopies(32, "*")));
 		for(int j = 0; j < 32; j++) {
 			attributeValue.setCharAt(j, attList.get(j).charAt(j));
 		}
+		// and then convert that two complements string into int and return its value
 		return CPabeTools.convertFromTwoComplement(attributeValue.toString());
 	}
 }
