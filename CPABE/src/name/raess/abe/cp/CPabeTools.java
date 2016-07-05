@@ -143,19 +143,19 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.CPabeConstants.LT:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT, 0);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT);
 	        	break;
 	        case CPabeSettings.CPabeConstants.LTEQ:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LT, 1);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.LTEQ);
 	        	break;	        	
 	        case CPabeSettings.CPabeConstants.GT:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT, 0);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT);
 	        	break;
 	        case CPabeSettings.CPabeConstants.GTEQ:
 	        	nodeObject = (JSONObject) policy.get(key);
-	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GT, -1);
+	        	root = CPabeTools.parseMathPolicy(nodeObject, CPabeSettings.CPabeConstants.GTEQ);
 	        	break;	        	
 	        default:
 	        	System.out.println("error in JSON: unknown key" + key.toString());
@@ -166,7 +166,7 @@ public class CPabeTools {
 		return root;
 	}
 
-	private static CPabePolicy parseMathPolicy(JSONObject policy, String operation, int shift) {
+	private static CPabePolicy parseMathPolicy(JSONObject policy, String operation) {
 		String att = null;
 		int attValue = 0;
 		CPabePolicy root = null;		
@@ -179,10 +179,10 @@ public class CPabeTools {
 	        	break;
 	        case CPabeSettings.CPabeConstants.VAL:
 	        	attValue = Integer.parseInt((String) policy.get(key));
-	        	// GTEQ = GT + 1 (shift by one)
 	        	// 32 bit value needs 32 children =(
+	        	// GTEQ = GT + 1 (shift by one)
 	        	if(operation == CPabeSettings.CPabeConstants.GTEQ) {
-	        		root = new CPabePolicy(att, attValue + shift, true); 
+	        		root = new CPabePolicy(att, attValue + 1, true); 
 	        	}
 	        	// GT
 	        	else if(operation == CPabeSettings.CPabeConstants.GT) {
@@ -190,7 +190,7 @@ public class CPabeTools {
 	        	}
 	        	// LTEQ = LT - 1 (shift by minus one)
 	        	else if(operation == CPabeSettings.CPabeConstants.LTEQ) {
-	        		root = new CPabePolicy(att, attValue + shift, false);
+	        		root = new CPabePolicy(att, attValue - 1, false);
 	        	}
 	        	// LT
 	        	else if(operation == CPabeSettings.CPabeConstants.LT) {
