@@ -25,19 +25,31 @@ public class CPabe {
 	// our ca
 	private CPabeCA ca;
 	/*  constructors a CPABE with a given cp-abe scheme using given {msk} and {pk} keys
-	 *  (given as String paths to the file(s)). If CPabeSettings.consoleKeyOutput
+	 *  (given as String paths to the binary file(s)). If CPabeSettings.consoleKeyOutput
 	 *  is set to true the newly created key pair is printed to the console
 	 *  
 	 *  @param mskPath path to a msk file
 	 *  @param pkPath path to a pk file
 	 */
-	public CPabe(String mskPath, String pkPath) throws ClassNotFoundException, IOException {
-		// generate new {pk} and {msk} keys with files given as string path
-		CPabePublicParameters pk = new CPabePublicParameters(pkPath);
-		CPabeMasterSecret msk = new CPabeMasterSecret(mskPath, pk);
-		// generate a new CA with a given key pair
-		this.ca = new CPabeCA(msk, pk);
-		// and give it out to console if desired
+	public CPabe(String mskString, String pkString, boolean base64) throws ClassNotFoundException, IOException {
+		if(base64) {
+			// generate new {pk} and {msk} keys with files given as string path
+			CPabePublicParameters pk = new CPabePublicParameters();
+			pk.importBase64(pkString);
+			CPabeMasterSecret msk = new CPabeMasterSecret();
+			msk.importBase64(mskString, pk);
+			// generate a new CA with a given key pair
+			this.ca = new CPabeCA(msk, pk);
+			// and give it out to console if desired			
+		}
+		else {
+			// generate new {pk} and {msk} keys with files given as string path
+			CPabePublicParameters pk = new CPabePublicParameters(pkString);
+			CPabeMasterSecret msk = new CPabeMasterSecret(mskString, pk);
+			// generate a new CA with a given key pair
+			this.ca = new CPabeCA(msk, pk);
+			// and give it out to console if desired
+		}
 		if(CPabeSettings.consoleOutput) {
 			System.out.println(this.ca.toString());			
 		}
@@ -242,7 +254,7 @@ public class CPabe {
 			CPabeTools.calculateMinLeaves(ct.policy, sk);
 			Element one = pk.p.getZr().newElement().setToOne();
 			// and root secret of bethencourt goyal tree (A)
-			Element A = CPabeTools.decTree(ct.policy, sk, pk, one);
+			Element A = CPabeTools.decryptNode(ct.policy, sk, pk, one);
 			// and multiply with cPrime and (1/e(C,D))
 			m.mul(A);
 			m.mul(pk.p.pairing(ct.c, sk.d).invert());

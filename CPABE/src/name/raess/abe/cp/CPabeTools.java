@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import it.unisa.dia.gas.jpbc.Element;
 import name.raess.abe.cp.CPabeSettings;
@@ -85,6 +86,63 @@ public class CPabeTools {
 		h.setFromHash(digest, 0, digest.length);
 	}
     // translate a policy given as JSONObject
+	// into active CPabePolicy objects
+	public static boolean validatePolicy(JSONObject policy) {
+		JSONArray nodeArray;
+		JSONObject nodeObject;
+		boolean ret = true;
+		for (Object key : policy.keySet()) {
+	        switch(key.toString().toUpperCase().replaceAll("[^A-Z]","")) {
+	        case CPabeSettings.CPabeConstants.OR:
+	        	nodeArray = (JSONArray) policy.get(key);
+	        	for (Object currentNode : nodeArray) {
+	        		ret &= validatePolicy((JSONObject) currentNode);
+	        	}
+	        	break;
+	        case CPabeSettings.CPabeConstants.AND:
+	        	nodeArray = (JSONArray) policy.get(key);
+	        	for (Object currentNode : nodeArray) {
+	        		ret &= validatePolicy((JSONObject) currentNode);
+	        	}
+	        	break;
+	        case CPabeSettings.CPabeConstants.OF:
+	        	nodeArray = (JSONArray) policy.get(key);
+	        	for (Object currentNode : nodeArray) {
+	        		ret &= validatePolicy((JSONObject) currentNode);
+	        	}
+	        	break;
+	        case CPabeSettings.CPabeConstants.ATT:
+	        	return true;
+	        case CPabeSettings.CPabeConstants.VAL:
+	        	return true;
+	        case CPabeSettings.CPabeConstants.EQ:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	ret &= validatePolicy(nodeObject);
+	        	break;
+	        case CPabeSettings.CPabeConstants.LT:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	ret &= validatePolicy(nodeObject);
+	        	break;
+	        case CPabeSettings.CPabeConstants.GT:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	ret &= validatePolicy(nodeObject);
+	        	break;
+	        case CPabeSettings.CPabeConstants.LTEQ:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	ret &= validatePolicy(nodeObject);
+	        	break;
+	        case CPabeSettings.CPabeConstants.GTEQ:
+	        	nodeObject = (JSONObject) policy.get(key);
+	        	ret &= validatePolicy(nodeObject);
+	        	break;
+	        default:
+	        	return false;
+	        }
+		}
+		return ret;
+	}
+	
+	// translate a policy given as JSONObject
 	// into active CPabePolicy objects
 	public static CPabePolicy parsePolicy(JSONObject policy, CPabePublicParameters pk) throws IOException {
 		String att = null;
@@ -258,40 +316,31 @@ public class CPabeTools {
 		return p.satisfiable;
 	}
 
-	public static Element decTree(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
+	public static Element decryptNode(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
 		if (p.children == null || p.children.length == 0) {
-			return CPabeTools.decLeaf(p, prv, pub, exp);
+			CPabeUserAttribute c = prv.attributes.get(p.index);
+			Element s = pub.p.getGT().newElement();
+			Element t = pub.p.getGT().newElement();
+			s = pub.p.pairing(p.cy, c.dj);
+			t = pub.p.pairing(p.cyPrime, c.djp);
+			t.invert();
+			s.mul(t);
+			s.powZn(exp);
+			return pub.p.getGT().newElement().setToOne().mul(s);
 		}
 		else {
-			return CPabeTools.decThresholdGate(p, prv, pub, exp);
+			Element t, expnew;
+			t = pub.p.getZr().newElement();
+			expnew = pub.p.getZr().newElement();
+			Element ret = pub.p.getGT().newElement();
+			for (int i = 0; i < p.satisfiableList.size(); i++) {
+				t = CPabeTools.lagrangeCoef(pub, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
+				expnew = exp.duplicate();
+				expnew.mul(t);
+				ret.add(CPabeTools.decryptNode(p.children[p.satisfiableList.get(i) - 1], prv, pub, expnew));
+			}
+			return ret;
 		}
-	}
-
-	private static Element decThresholdGate(CPabePolicy policy, CPabeUserKey prv, CPabePublicParameters pk, Element exp) {
-		Element t, expnew;
-		t = pk.p.getZr().newElement();
-		expnew = pk.p.getZr().newElement();
-		Element ret = pk.p.getGT().newElement();
-		for (int i = 0; i < policy.satisfiableList.size(); i++) {
-			t = CPabeTools.lagrangeCoef(pk, policy.satisfiableList, (policy.satisfiableList.get(i)).intValue());
-			expnew = exp.duplicate();
-			expnew.mul(t);
-			ret.add(CPabeTools.decTree(policy.children[policy.satisfiableList.get(i) - 1], prv, pk, expnew));
-		}
-		return ret;
-	}
-
-
-	private static Element decLeaf(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
-		CPabeUserAttribute c = prv.attributes.get(p.index);
-		Element s = pub.p.getGT().newElement();
-		Element t = pub.p.getGT().newElement();
-		s = pub.p.pairing(p.cy, c.dj);
-		t = pub.p.pairing(p.cyPrime, c.djp);
-		t.invert();
-		s.mul(t);
-		s.powZn(exp);
-		return pub.p.getGT().newElement().setToOne().mul(s);
 	}
 
 	private static Element lagrangeCoef(CPabePublicParameters pk, ArrayList<Integer> integerList, int i) {

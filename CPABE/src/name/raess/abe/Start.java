@@ -29,7 +29,7 @@ class Start {
         //CPabe cp = new CPabe();
     	
     	// Load an existing CPabe
-        CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK);
+        CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK, false);
         
         // and save msk
         cp.getMasterSecretKey().saveAs(CPabeSettings.CPabeKeyMSK);
