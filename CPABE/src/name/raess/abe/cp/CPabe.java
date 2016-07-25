@@ -31,21 +31,23 @@ public class CPabe {
 	 *  @param mskPath path to a msk file
 	 *  @param pkPath path to a pk file
 	 */
-	public CPabe(String mskString, String pkString, boolean base64) throws ClassNotFoundException, IOException {
+	public CPabe(String mskString, String pkString, String password, boolean base64) throws ClassNotFoundException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
 		if(base64) {
 			// generate new {pk} and {msk} keys with files given as string path
 			CPabePublicParameters pk = new CPabePublicParameters();
 			pk.importBase64(pkString);
 			CPabeMasterSecret msk = new CPabeMasterSecret();
-			msk.importBase64(mskString, pk);
+			msk.importBase64(mskString, password, pk);
 			// generate a new CA with a given key pair
 			this.ca = new CPabeCA(msk, pk);
 			// and give it out to console if desired			
 		}
 		else {
 			// generate new {pk} and {msk} keys with files given as string path
-			CPabePublicParameters pk = new CPabePublicParameters(pkString);
-			CPabeMasterSecret msk = new CPabeMasterSecret(mskString, pk);
+			CPabePublicParameters pk = new CPabePublicParameters();
+			pk.loadFrom(pkString);
+			CPabeMasterSecret msk = new CPabeMasterSecret();
+			msk.loadFrom(mskString, password, pk);
 			// generate a new CA with a given key pair
 			this.ca = new CPabeCA(msk, pk);
 			// and give it out to console if desired
@@ -59,15 +61,17 @@ public class CPabe {
 	 *  If CPabeSettings.consoleKeyOutput is set to true the newly 
 	 *  created key pair is printed to the console
 	 */
-	public CPabe() {
-		// completely new {pk} and {msk} keys
-		CPabePublicParameters pk = new CPabePublicParameters();
-		CPabeMasterSecret msk = new CPabeMasterSecret();	
-		// generate a completely new CA upon construction
-		this.ca = CPabe.setup(pk, msk);
-		// and give it out to console if desired
-		if(CPabeSettings.consoleOutput) {
-			System.out.println(this.ca.toString());			
+	public CPabe(boolean generate) {
+		if(generate) {
+			// completely new {pk} and {msk} keys
+			CPabePublicParameters pk = new CPabePublicParameters();
+			CPabeMasterSecret msk = new CPabeMasterSecret();	
+			// generate a completely new CA upon construction
+			this.ca = CPabe.setup(pk, msk);
+			// and give it out to console if desired
+			if(CPabeSettings.consoleOutput) {
+				System.out.println(this.ca.toString());			
+			}
 		}
 	}
 	/*  return the master secret key {msk}
@@ -177,9 +181,9 @@ public class CPabe {
 			att.dj = dgPrime.duplicate();
 			att.dj.mul(hashedAttribute);
 			// calc & set Dj prime part
-			att.djp = pk.p.getG1().newElement();
-			att.djp = pk.g.duplicate();
-			att.djp.powZn(rj);
+			att.djPrime = pk.p.getG1().newElement();
+			att.djPrime = pk.g.duplicate();
+			att.djPrime.powZn(rj);
 			// add to attributes list of {sk}
 			prv.attributes.add(att);
 		}

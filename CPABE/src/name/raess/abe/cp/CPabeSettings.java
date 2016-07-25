@@ -4,7 +4,7 @@ public class CPabeSettings {
 	// abe configuration
 	public static final String version = "0.0.3";
 	public static final String versionString = "version: jCP-ABE " + version + "\n";
-	public static final int rBits = 512;
+	public static final int rBits = 8;
 	public static final int qBits = 1024;
 	public static final boolean consoleOutput = false;
 	// file names
@@ -20,7 +20,7 @@ public class CPabeSettings {
 		public static final String NEWLINE = System.getProperty("line.separator");
 		public static final String HEAD = "-----BEGIN CPABE " + SIGN + " BLOCK-----" + NEWLINE;
 		public static final String TAIL = NEWLINE + "-----END CPABE " + SIGN + " BLOCK-----";
-		public static final String MSK = "MASTER KEY";
+		public static final String MSK = "ENCRYPTED MASTER KEY";
 		public static final String PK = "PUBLIC KEY";
 		public static final String CT = "CIPHER TEXT";
 		public static final String SK = "USER KEY";

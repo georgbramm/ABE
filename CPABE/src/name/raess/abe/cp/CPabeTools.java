@@ -12,6 +12,7 @@ import java.security.spec.InvalidParameterSpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -52,6 +53,7 @@ public class CPabeTools {
         ret[1] = CPabeImportExport.b64encode(iv);
         return ret;
     }
+	
 	// decrypt aes ciphertext/iv from {ct} using keyElement as key
 	// @return decrypted data
     public static byte[] symDecrypt(Element keyElement, CPabeCipherText ct) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
@@ -64,6 +66,7 @@ public class CPabeTools {
         cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
         return cipher.doFinal(cipherText);
     }	
+    
 	// derive a SecretKeySpec from an Element
 	// @return ciphertext and iv as String[]	
 	public static SecretKeySpec deriveKey(Element keyElement) throws NoSuchAlgorithmException {
@@ -77,14 +80,64 @@ public class CPabeTools {
         SecretKeySpec secret = new SecretKeySpec(key, "AES");
         return secret;
 	}
+	
+	// encrypt data using a String password
+	// with AES/CBC/PKCS5Padding
+	// @return ciphertext and iv as String[]
+	public static String[] aesEncrypt(String password, byte[] data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
+        // try to get sha 256
+        MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        // and use element byte value
+        byte[] key;
+        key = sha.digest(password.getBytes());
+        key = Arrays.copyOf(key, 16); // use only 128 bit because of stupid java restrictions =(
+        SecretKeySpec secret = new SecretKeySpec(key, "AES");
+        //encrypt the message
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secret);
+        AlgorithmParameters params = cipher.getParameters();
+        byte[] iv = params.getParameterSpec(IvParameterSpec.class).getIV();
+        String[] ret = new String[2];
+        ret[0] = CPabeImportExport.b64encode(cipher.doFinal(data));
+        ret[1] = CPabeImportExport.b64encode(iv);
+        return ret;
+    }
+	
+	// decrypt aes ciphertext/iv using a String password
+	// @return decrypted data
+    public static byte[] aesDecrypt(String password, String[] data) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException {
+    	byte[] cipherText = CPabeImportExport.b64decode(data[0]);
+    	byte[] iv = CPabeImportExport.b64decode(data[1]);
+        // convert element to bytes
+        MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        // and use element byte value
+        byte[] key = sha.digest(password.getBytes());
+        key = Arrays.copyOf(key, 16); // use only 128 bit because of stupid java restrictions =(
+        SecretKeySpec secret = new SecretKeySpec(key, "AES");
+        // Decrypt the message
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(iv));
+        return cipher.doFinal(cipherText);
+    }
+	
 	// a random oracle
 	// set h to a random point
-	// depending on a SHA-1 hash from attribute
+	// depending on a SHA-256 hash from attribute
 	public static void randomOracle(Element h, String attribute) throws NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		byte[] digest = md.digest(attribute.getBytes());
 		h.setFromHash(digest, 0, digest.length);
 	}
+	
+	// a random oracle
+	// set h to a random String
+	// depending on a SHA-256 hash from String
+	public static String randomOracle(String password) throws NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
+		byte[] digest = md.digest(password.getBytes());
+		return new String(digest);
+	}
+	
     // translate a policy given as JSONObject
 	// into active CPabePolicy objects
 	public static boolean validatePolicy(JSONObject policy) {
@@ -286,60 +339,86 @@ public class CPabeTools {
 		}
 	}
 
-	public static boolean checkSatisfy(CPabePolicy p, CPabeUserKey prv) {
-		int i, l;
-		String prvAttr;
-		p.satisfiable = false;
-		if (p.children == null || p.children.length == 0) {
-			for (i = 0; i < prv.attributes.size(); i++) {
-				prvAttr = prv.attributes.get(i).attribute;
-				if (p != null && prvAttr.compareTo(p.attribute) == 0) {
-					p.satisfiable = true;
-					p.index = i;
+	public static boolean checkSatisfy(CPabePolicy policy, CPabeUserKey sk) {
+		// this policy is not satisfiable
+		policy.satisfiable = false;
+		// unless :
+		// if this is an attribute
+		if (policy.children == null || policy.children.length == 0) {
+			// compare with all attributes inside user key prv
+			for (int i = 0; i < sk.attributes.size(); i++) {
+				// compare attribute with this attribute
+				if (sk.attributes.get(i).attribute.compareTo(policy.attribute) == 0) {
+					// this attribute is satisfiable
+					policy.satisfiable = true;
+					// set position of attribute in user key sk inside policy
+					policy.index = i;
 					break;
 				}
 			}
-		} else {
-			for (i = 0; i < p.children.length; i++) {
-				CPabeTools.checkSatisfy(p.children[i], prv);
-			}
-			l = 0;
-			for (i = 0; i < p.children.length; i++) {
-				if (p.children[i].satisfiable) {
+		}
+		// if this is a threshold gate
+		else {
+			// counter of satisfiable children
+			int l = 0;
+			// for each child
+			for (int i = 0; i < policy.children.length; i++) {
+				// check if satisfiable
+				if (CPabeTools.checkSatisfy(policy.children[i], sk)) {
+					// if satisfiable raise counter
 					l++;
 				}
 			}
-			if (l >= p.k) {
-				p.satisfiable = true;
+			// if more children are satisfiable than k 
+			if (l >= policy.k) {
+				// this is satisfiable
+				policy.satisfiable = true;
 			}
 		}
-		return p.satisfiable;
+		return policy.satisfiable;
 	}
 
-	public static Element decryptNode(CPabePolicy p, CPabeUserKey prv, CPabePublicParameters pub, Element exp) {
-		if (p.children == null || p.children.length == 0) {
-			CPabeUserAttribute c = prv.attributes.get(p.index);
-			Element s = pub.p.getGT().newElement();
-			Element t = pub.p.getGT().newElement();
-			s = pub.p.pairing(p.cy, c.dj);
-			t = pub.p.pairing(p.cyPrime, c.djp);
-			t.invert();
+	public static Element decryptNode(CPabePolicy policy, CPabeUserKey sk, CPabePublicParameters pk, Element x) {
+		Element s,t;
+		// if this is an attribute
+		if (policy.children == null || policy.children.length == 0) {
+			// get the attribute from the user key sk
+			CPabeUserAttribute attribute = sk.attributes.get(policy.index);
+			// temporary elements from GT
+			s = pk.p.getGT().newElement();
+			t = pk.p.getGT().newElement();
+			// s := compute pairing between cy and dj part
+			s = pk.p.pairing(policy.cy, attribute.dj);
+			// 1/t := compute pairing between cyPrime and djPrime part
+			t = pk.p.pairing(policy.cyPrime, attribute.djPrime).invert();
+			// s := s/t
 			s.mul(t);
-			s.powZn(exp);
-			return pub.p.getGT().newElement().setToOne().mul(s);
+			// this equals e(cy, dj)/e(cyPrime, djPrime)
+			s.powZn(x);
+			// s := (e(cy, dj)/e(cyPrime, djPrime))^x
+			return pk.p.getGT().newElement().setToOne().mul(s);
 		}
+		// if this is a threshold gate
 		else {
-			Element t, expnew;
-			t = pub.p.getZr().newElement();
-			expnew = pub.p.getZr().newElement();
-			Element ret = pub.p.getGT().newElement();
-			for (int i = 0; i < p.satisfiableList.size(); i++) {
-				t = CPabeTools.lagrangeCoef(pub, p.satisfiableList, (p.satisfiableList.get(i)).intValue());
-				expnew = exp.duplicate();
+			Element expnew;
+			t = pk.p.getZr().newElement();
+			expnew = pk.p.getZr().newElement();
+			s = pk.p.getGT().newElement();
+			// for each child
+			for (int i = 0; i < policy.satisfiableList.size(); i++) {
+				// compute lagrange coefficient
+				t = CPabeTools.lagrangeCoef(pk, policy.satisfiableList, (policy.satisfiableList.get(i)).intValue());
+				// set expnew to x
+				expnew = x.duplicate();
+				// and multiply with lagrange coefficient
 				expnew.mul(t);
-				ret.add(CPabeTools.decryptNode(p.children[p.satisfiableList.get(i) - 1], prv, pub, expnew));
+				// compute Fz recursively 
+				Element Fz = CPabeTools.decryptNode(policy.children[policy.satisfiableList.get(i) - 1], sk, pk, expnew);
+				// and add value of Fz to s
+				s.add(Fz);
 			}
-			return ret;
+			// when all children are computed return s
+			return s;
 		}
 	}
 

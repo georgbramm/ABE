@@ -30,9 +30,27 @@ public class CPabePublicParameters {
 	public Element f;			// G1
 	public Element gHatAlpha;	// GT
 
-	// this creates a saved {pk} from a binary file located at loadfrom
-	@SuppressWarnings({ "unchecked", "resource" })
-	public CPabePublicParameters(String loadfrom) throws IOException, ClassNotFoundException {
+	// default ctor
+	public CPabePublicParameters() {
+	}
+
+	// this saves this {pk} as a binary file located at saveas
+	public void saveAs(String saveas) throws IOException {
+		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
+		List<byte[]> list = new ArrayList<byte[]>();
+		list.add(this.g.toBytes()); 		// 0
+		list.add(this.gp.toBytes());		// 1
+		list.add(this.h.toBytes());			// 2
+		list.add(this.f.toBytes());			// 3
+		list.add(this.gHatAlpha.toBytes());	// 4
+		out.writeObject(this.pairingParams);
+		out.writeObject(list);
+	    out.close();		    
+	}
+
+	// this loads this {pk} from a binary file located at loadfrom
+	@SuppressWarnings({ "resource", "unchecked" })
+	public void loadFrom(String loadfrom) throws IOException, ClassNotFoundException {
 		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream(fin);
 		Object obj = objin.readObject();
@@ -54,25 +72,7 @@ public class CPabePublicParameters {
 			this.f.setFromBytes(list.get(3));
 			this.gHatAlpha = this.p.getGT().newElement();
 			this.gHatAlpha.setFromBytes(list.get(4));
-		}		
-	}
-
-	// default ctor
-	public CPabePublicParameters() {
-	}
-
-	// this saves this {pk} as a binary file located at saveas
-	public void saveAs(String saveas) throws IOException {
-		ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
-		List<byte[]> list = new ArrayList<byte[]>();
-		list.add(this.g.toBytes()); 		// 0
-		list.add(this.gp.toBytes());		// 1
-		list.add(this.h.toBytes());			// 2
-		list.add(this.f.toBytes());			// 3
-		list.add(this.gHatAlpha.toBytes());	// 4
-		out.writeObject(this.pairingParams);
-		out.writeObject(list);
-	    out.close();		    
+		}		    
 	}
 	
 	// export this {pk} as json string

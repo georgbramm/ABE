@@ -23,22 +23,24 @@ import name.raess.abe.cp.objects.CPabeUserKey;
 
 class Start {
     @SuppressWarnings("static-access")
-	public static void main(String[] args) throws NoSuchAlgorithmException, ParseException, InvalidAlgorithmParameterException, IOException, ClassNotFoundException {
+	public static void main(String[] args) throws NoSuchAlgorithmException, ParseException, InvalidAlgorithmParameterException, IOException, ClassNotFoundException, InvalidKeyException, InvalidKeySpecException, NoSuchPaddingException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException {
     	
     	// Start new CPabe
         //CPabe cp = new CPabe();
     	
+    	String password = "wikileaks";
+    	
     	// Load an existing CPabe
-        CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK, false);
+        CPabe cp = new CPabe(CPabeSettings.CPabeKeyMSK, CPabeSettings.CPabeKeyPK, password, false);
         
         // and save msk
-        cp.getMasterSecretKey().saveAs(CPabeSettings.CPabeKeyMSK);
+        cp.getMasterSecretKey().saveAs(CPabeSettings.CPabeKeyMSK, password);
         // and save pk
         cp.getPublicParameters().saveAs(CPabeSettings.CPabeKeyPK);
         
         cp.getPublicParameters().importBase64(cp.getPublicParameters().exportBase64());
         
-        cp.getMasterSecretKey().importBase64(cp.getMasterSecretKey().exportBase64(), cp.getPublicParameters());
+        cp.getMasterSecretKey().importBase64(cp.getMasterSecretKey().exportBase64(password), password, cp.getPublicParameters());
                      
         //long date = new Date().getTime() / 1000;
         
@@ -50,7 +52,8 @@ class Start {
 		CPabeUserKey georgsKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 		georgsKey.saveAs(CPabeSettings.CPabeKeySK.replace("$username", "georg"));
 		georgsKey.importBase64(georgsKey.exportBase64(), cp.getPublicParameters());
-        georgsKey = new CPabeUserKey("keys/abe-sk-georg", cp.getPublicParameters());
+        georgsKey = new CPabeUserKey();
+        georgsKey.loadFrom("keys/abe-sk-georg", cp.getPublicParameters());
 		
 		try {
 			String sJSONenc = "{\"and\":[{\"gt\":{\"att\":\"date\", \"val\":\"-25\"}},{\"att\":\"georg\"}]}";
@@ -60,8 +63,11 @@ class Start {
 			System.out.println(georgsKey.exportBase64());
 			ct.saveAs(CPabeSettings.CPabeKeyCT);
 			ct = null;
-			ct = new CPabeCipherText(CPabeSettings.CPabeKeyCT, cp.getPublicParameters());
+			ct = new CPabeCipherText();
+			ct.loadFrom(CPabeSettings.CPabeKeyCT, cp.getPublicParameters());
 			System.out.println(ct.policy.toJSON().toJSONString());
+			System.out.println(cp.getMasterSecretKey().exportBase64("test"));
+			System.out.println(cp.getMasterSecretKey().exportBase64("test2"));
 			System.out.println(new String(cp.decrypt(cp.getPublicParameters(), georgsKey, ct)));
 		} catch (IOException e) {
 			System.out.println("error parsing policy");

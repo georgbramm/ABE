@@ -20,12 +20,39 @@ public class CPabeCipherText {
 	public Element cPrime;		// from GT
 	public String cipherText;	// AES encrypted data
 	public String iv;			// AES IV
+	
 	// default ctor
 	public CPabeCipherText() {
 	}
-	// this creates a saved {pk} from a binary file located at loadfrom
+	
+	// return as json string representation
+	@SuppressWarnings("unchecked")
+	public String toString() {
+		JSONObject obj = new JSONObject();
+		obj.put("c", this.c.toString());
+		obj.put("cPrime", this.cPrime.toString());
+		obj.put("ct", this.cipherText.toString());
+		obj.put("iv", this.iv.toString());
+		obj.put("policy", this.policy.toString());
+		return obj.toJSONString();
+	}
+	
+	// save in a binary file
+	public void saveAs(String saveas) throws IOException {
+		List<byte[]> list = new ArrayList<byte[]>();
+		list.add(this.c.toBytes());
+		list.add(this.cPrime.toBytes());
+		list.add(this.cipherText.getBytes());
+		list.add(this.iv.getBytes());
+		list.add(this.policy.toJSON().toJSONString().getBytes());
+	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
+	    out.writeObject(list);
+	    out.close();
+	}
+
+	// this sets and loads this {pk} from a binary file located at loadfrom
 	@SuppressWarnings({ "unchecked", "resource" })
-	public CPabeCipherText(String loadfrom, CPabePublicParameters pk) throws IOException, ClassNotFoundException, ParseException {
+	public void loadFrom(String loadfrom, CPabePublicParameters pk) throws IOException, ClassNotFoundException, ParseException {
 		FileInputStream fin = new FileInputStream(loadfrom);
 		ObjectInputStream objin = new ObjectInputStream(fin);
 		Object obj = objin.readObject();
@@ -42,29 +69,7 @@ public class CPabeCipherText {
 			this.policy = new CPabePolicy(jsonPolicy, pk);
 		}		
 	}
-	// return as json string representation
-	@SuppressWarnings("unchecked")
-	public String toString() {
-		JSONObject obj = new JSONObject();
-		obj.put("c", this.c.toString());
-		obj.put("cPrime", this.cPrime.toString());
-		obj.put("ct", this.cipherText.toString());
-		obj.put("iv", this.iv.toString());
-		obj.put("policy", this.policy.toString());
-		return obj.toJSONString();
-	}
-	// save in a binary file
-	public void saveAs(String saveas) throws IOException {
-		List<byte[]> list = new ArrayList<byte[]>();
-		list.add(this.c.toBytes());
-		list.add(this.cPrime.toBytes());
-		list.add(this.cipherText.getBytes());
-		list.add(this.iv.getBytes());
-		list.add(this.policy.toJSON().toJSONString().getBytes());
-	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
-	    out.writeObject(list);
-	    out.close();
-	}
+	
 	// return as base64 encoded json string
 	@SuppressWarnings("unchecked")
 	public String exportBase64() {
@@ -79,6 +84,7 @@ public class CPabeCipherText {
 				+ CPabeImportExport.b64encode(obj.toJSONString().getBytes()).replaceAll("(.{"+CPabeSettings.CPabeConstants.CHARSPERLINE+"})", "$1\n") 
 				+ CPabeSettings.CPabeConstants.TAIL.replaceAll(CPabeSettings.CPabeConstants.SIGN, CPabeSettings.CPabeConstants.CT);
 	}
+	
 	// import from a base64 encoded json string
 	// using CPabePublicParameters
 	public boolean importBase64(String b64, CPabePublicParameters pk) {

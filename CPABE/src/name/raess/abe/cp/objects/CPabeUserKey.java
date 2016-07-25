@@ -25,29 +25,6 @@ import name.raess.abe.cp.CPabeTools;
 public class CPabeUserKey {
 	public Element d; 										// G2
 	public ArrayList<CPabeUserAttribute> attributes;		// list of attributes
-	// this creates a new {sk} from a saved binary file located at loadfrom 
-	// using the pairing in {pk}
-	@SuppressWarnings({ "resource", "unchecked" })
-	public CPabeUserKey(String loadfrom, CPabePublicParameters pk) throws ClassNotFoundException, IOException {
-		FileInputStream fin = new FileInputStream(loadfrom);
-		ObjectInputStream objin = new ObjectInputStream (fin);
-		Object obj = objin.readObject();
-		this.attributes = new ArrayList<CPabeUserAttribute>();
-		if (obj instanceof List<?>) {
-			List<byte[]> list = (List<byte[]>) obj;
-			this.d = pk.p.getG2().newElement();
-			this.d.setFromBytes(list.get(0));
-			for(int j = 1; j < list.size(); j += 3) {
-				String desc = new String(list.get(j), "UTF-8");
-				Element dj = pk.p.getG2().newElement();
-				dj.setFromBytes(list.get(j + 1));
-				Element djp = pk.p.getG1().newElement();
-				djp.setFromBytes(list.get(j + 2));
-				CPabeUserAttribute a = new CPabeUserAttribute(desc, dj , djp);
-				this.attributes.add(a);
-			}
-		}
-	}
 	// default ctor
 	public CPabeUserKey() {
 	}
@@ -70,11 +47,33 @@ public class CPabeUserKey {
 		for(int x = 0;x < this.attributes.size(); x++) {
 			list.add(this.attributes.get(x).attribute.getBytes());
 			list.add(this.attributes.get(x).dj.toBytes());
-			list.add(this.attributes.get(x).djp.toBytes());
+			list.add(this.attributes.get(x).djPrime.toBytes());
 		}
 	    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveas));
 	    out.writeObject(list);
 	    out.close();
+	}
+	
+	@SuppressWarnings({ "unchecked", "resource" })
+	public void loadFrom(String loadfrom, CPabePublicParameters pk) throws IOException, ClassNotFoundException {
+		FileInputStream fin = new FileInputStream(loadfrom);
+		ObjectInputStream objin = new ObjectInputStream (fin);
+		Object obj = objin.readObject();
+		this.attributes = new ArrayList<CPabeUserAttribute>();
+		if (obj instanceof List<?>) {
+			List<byte[]> list = (List<byte[]>) obj;
+			this.d = pk.p.getG2().newElement();
+			this.d.setFromBytes(list.get(0));
+			for(int j = 1; j < list.size(); j += 3) {
+				String desc = new String(list.get(j), "UTF-8");
+				Element dj = pk.p.getG2().newElement();
+				dj.setFromBytes(list.get(j + 1));
+				Element djp = pk.p.getG1().newElement();
+				djp.setFromBytes(list.get(j + 2));
+				CPabeUserAttribute a = new CPabeUserAttribute(desc, dj , djp);
+				this.attributes.add(a);
+			}
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -137,8 +136,8 @@ public class CPabeUserKey {
 	        	 CPabeUserAttribute newAttribute = new CPabeUserAttribute(desc);
 	        	 newAttribute.dj = pk.p.getG2().newElement();
 	        	 newAttribute.dj.setFromBytes(encodedDj);
-	        	 newAttribute.djp = pk.p.getG1().newElement();
-	        	 newAttribute.djp.setFromBytes(encodedDjPrime);
+	        	 newAttribute.djPrime = pk.p.getG1().newElement();
+	        	 newAttribute.djPrime.setFromBytes(encodedDjPrime);
 	        	 this.attributes.add(newAttribute);
 	         }
 	         return true;

@@ -10,7 +10,16 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.InvalidParameterSpecException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import name.raess.abe.cp.CPabe;
@@ -20,24 +29,26 @@ import name.raess.abe.cp.objects.CPabePublicParameters;
 import name.raess.abe.cp.objects.CPabeUserKey;
 
 public class console {
-	public static void main ( String [] arguments ) {
-		String msk = "";
-		String pk = "";
-		String sk = "";
-		String ct = "";
-		String json = "";
+	public static CPabe cpAbe;
+	private static String msk = "";
+	private static String pk = "";
+	private static String sk = "";
+	private static String ct = "";
+	public static void main ( String [] arguments ) throws InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidParameterSpecException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
 		if(arguments.length > 2) {
-			if(arguments[0].equals("setup")) {
+			if(arguments[0].equals("-setup")) {
 				try {
-					CPabe cp = new CPabe();
-					writeTextFile(arguments[1], cp.getMasterSecretKey().exportBase64());
-					writeTextFile(arguments[2], cp.getPublicParameters().exportBase64());
+					char[] pw = System.console().readPassword("Please enter [msk] password:");
+					cpAbe = new CPabe(true);
+					writeTextFile(arguments[1], cpAbe.getMasterSecretKey().exportBase64(new String(pw)));
+					writeTextFile(arguments[2], cpAbe.getPublicParameters().exportBase64());
 				} catch (IOException e) {
 					System.out.println("error: io exception");
 					e.printStackTrace();
 				}
 			}
-			else if(arguments[0].equals("keygen")) {
+			else if(arguments[0].equals("-keygen")) {
+				char[] pw = System.console().readPassword("Please enter [msk] password:");
 				msk = readTextFile(arguments[1]);
 				pk = readTextFile(arguments[2]);
 				String[] attributes = new String[arguments.length - 4];
@@ -45,16 +56,16 @@ public class console {
 			    	attributes[i] = arguments[i + 4];
 			    }
 				try {
-					CPabe cp = new CPabe();
+					CPabe cp = new CPabe(true);
 					cp.getPublicParameters().importBase64(pk);
-					cp.getMasterSecretKey().importBase64(msk, cp.getPublicParameters());
+					cp.getMasterSecretKey().importBase64(msk, new String(pw), cp.getPublicParameters());
 					CPabeUserKey userKey = CPabe.keygen(cp.getPublicParameters(), cp.getMasterSecretKey(), attributes);
 					writeTextFile(arguments[3], userKey.exportBase64());
 				} catch (ClassNotFoundException | IOException | NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}
 			}
-			else if (arguments[0].equals("encrypt")) {
+			else if (arguments[0].equals("-encrypt")) {
 				pk = readTextFile(arguments[1]);
 				CPabePublicParameters ppk = new CPabePublicParameters();
 				try {
@@ -74,7 +85,7 @@ public class console {
 					e1.printStackTrace();
 				}
 			}
-			else if (arguments[0].equals("decrypt")) {
+			else if (arguments[0].equals("-decrypt")) {
 				pk = readTextFile(arguments[1]);
 				sk = readTextFile(arguments[2]);
 				ct = readTextFile(arguments[3]);
@@ -100,13 +111,13 @@ public class console {
 		else {
 			System.out.println("usage:\n------");
 			System.out.println("1) generate a new scheme:");
-			System.out.println("   java -jar "+System.getProperty("java.class.path")+" setup [msk] [pk]\n");
+			System.out.println("   java -jar "+System.getProperty("java.class.path")+" -setup [msk] [pk]\n");
 			System.out.println("2) generate a new key:");
-			System.out.println("   java -jar "+System.getProperty("java.class.path")+" keygen [msk] [pk] [sk] [attributes]\n");
+			System.out.println("   java -jar "+System.getProperty("java.class.path")+" -keygen [msk] [pk] [sk] [attributes]\n");
 			System.out.println("3) encrypt a file:");
-			System.out.println("   java -jar "+System.getProperty("java.class.path")+" encrypt [pk] [file] [policy]\n");
+			System.out.println("   java -jar "+System.getProperty("java.class.path")+" -encrypt [pk] [file] [policy]\n");
 			System.out.println("4) decrypt a file:");
-			System.out.println("   java -jar "+System.getProperty("java.class.path")+" decrypt [pk] [sk] [file]\n");
+			System.out.println("   java -jar "+System.getProperty("java.class.path")+" -decrypt [pk] [sk] [file]\n");
 			System.out.println("where:");
 			System.out.println("[msk] is the path to the master secret key");
 			System.out.println("[pk] is the path to the public parameters key");

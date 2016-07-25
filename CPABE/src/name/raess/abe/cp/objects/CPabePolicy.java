@@ -257,10 +257,12 @@ public class CPabePolicy {
 		attributeValue.setCharAt(att.length() + CPabeSettings.CPabeConstants.SIGN.length() + position, value);
 		return attributeValue.toString();
 	}
+	
 	// return this policy as a JSON Object
 	public String toString() {
 		return this.toStringDetail(false);
 	}
+	
 	// return this policy as a String
 	@SuppressWarnings("unchecked")
 	public JSONObject toJSON() {
